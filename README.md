@@ -1,7 +1,5 @@
 # Aplikasi-Manajemen-Absensi-Praktikum
 
-# Aplikasi Manajemen Absensi Praktikum
-
 ## Overview
 
 Aplikasi Manajemen Absensi Praktikum adalah aplikasi yang dirancang untuk membantu proses pengelolaan dan pencatatan kehadiran dalam kegiatan praktikum. Aplikasi ini menyediakan antarmuka bagi Asisten Praktikum (Asprak) untuk mengelola sesi praktikum dan memantau kehadiran, serta bagi Praktikan untuk melihat jadwal dan melakukan presensi dengan mudah.
@@ -85,14 +83,43 @@ Dengan demikian, aplikasi pada tahap ini digunakan untuk menunjukkan alur penggu
 
 Dengan adanya aplikasi ini, pengelolaan presensi praktikum diharapkan menjadi lebih terstruktur dan mudah dipahami. Asisten Praktikum dapat memantau kehadiran dengan lebih praktis, sedangkan Praktikan dapat mengetahui jadwal, melakukan presensi, dan memeriksa riwayat kehadirannya melalui satu antarmuka.
 
-## Pengembangan Selanjutnya
 
-Aplikasi dapat dikembangkan lebih lanjut dengan menambahkan:
+# Software Requirements Specification (SRS)
 
-- Penyimpanan data permanen menggunakan basis data.
-- Autentikasi dan pengelolaan akun pengguna.
-- Sinkronisasi data kehadiran secara real-time.
-- Pengelolaan jadwal praktikum yang lebih lengkap.
-- Laporan dan ekspor rekap presensi.
-- Integrasi dengan sistem informasi akademik atau praktikum yang sudah digunakan.
+### A. Kebutuhan Fungsional (FR)
 
+| Kode | Nama Kebutuhan | Deskripsi |
+|---|---|---|
+| FR-01 | Jadwal Asprak | Asprak dapat melihat jadwal sesi praktikum yang menjadi tanggung jawabnya. |
+| FR-02 | Detail Sesi | Asprak dapat melihat detail dan status sesi praktikum. |
+| FR-03 | Membuka Sesi | Asprak dapat membuka sesi agar Praktikan dapat melakukan presensi. |
+| FR-04 | Pemantauan Kehadiran | Asprak dapat melihat daftar dan status kehadiran Praktikan. |
+| FR-05 | Rekap Presensi | Asprak dapat melihat rekap kehadiran beserta waktu presensi. |
+| FR-06 | Menutup Sesi | Asprak dapat menutup sesi agar presensi baru tidak dapat dilakukan. |
+| FR-07 | Jadwal Praktikan | Praktikan dapat melihat jadwal dan detail sesi praktikum. |
+| FR-08 | Presensi Praktikan | Praktikan dapat mencatat kehadiran ketika sesi sedang dibuka. |
+| FR-09 | Riwayat Presensi | Praktikan dapat melihat riwayat kehadiran pribadinya. |
+| FR-10 | Pergantian Perspektif | Pengguna dapat berpindah antara perspektif Asprak dan Praktikan untuk keperluan demonstrasi. |
+| FR-11 | Validasi Tindakan | Aplikasi membatasi tindakan berdasarkan status sesi, termasuk mencegah presensi saat sesi belum dibuka atau telah ditutup. |
+| FR-12 | Umpan Balik | Aplikasi memberikan notifikasi atau informasi mengenai keberhasilan dan kegagalan tindakan pengguna. |
+| FR-13 | Navigasi | Pengguna dapat berpindah halaman melalui navigasi yang jelas. |
+| FR-14 | Tampilan Responsif | Antarmuka menyesuaikan ukuran layar desktop dan perangkat mobile. |
+| FR-15 | Data Dummy dan Kondisi Kosong | Aplikasi menyediakan data contoh dan tampilan kondisi kosong untuk mendukung demonstrasi alur penggunaan. |
+
+### B. Kebutuhan Nonfungsional (NFR)
+
+| Kode | Nama Kebutuhan | Deskripsi |
+|---|---|---|
+| NFR-01 | Responsivitas | Antarmuka dapat digunakan dengan nyaman pada desktop dan perangkat mobile. |
+| NFR-02 | Kemudahan Penggunaan | Antarmuka memiliki navigasi yang jelas dan alur interaksi yang mudah dipahami. |
+| NFR-03 | Konsistensi | Informasi sesi dan status presensi ditampilkan secara konsisten pada halaman terkait. |
+| NFR-04 | Keandalan Interaksi | Interaksi utama berjalan dengan baik dan menangani kondisi seperti sesi belum dibuka, sesi selesai, serta presensi yang sudah tercatat. |
+| NFR-05 | Kemudahan Pengembangan | Struktur aplikasi dibuat agar mudah dipelihara dan dikembangkan pada sprint berikutnya. |
+
+### C. Batasan Implementasi Sprint 1
+
+- Data pengguna, jadwal, sesi, dan presensi menggunakan data dummy atau lokal.
+- Perubahan data dikelola selama aplikasi berjalan; penyimpanan permanen belum menjadi fokus sprint ini.
+- Belum terdapat integrasi basis data, autentikasi pengguna sesungguhnya, atau sinkronisasi data antarperangkat.
+- Presensi hanya dapat dilakukan pada sesi yang sedang dibuka dan satu Praktikan tidak dapat melakukan presensi berulang pada sesi yang sama.
+- Pergantian perspektif Asprak dan Praktikan digunakan untuk demonstrasi alur aplikasi, bukan sebagai sistem otorisasi pengguna yang sesungguhnya.
