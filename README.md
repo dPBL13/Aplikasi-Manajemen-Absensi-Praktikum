@@ -1,4 +1,9 @@
 # Aplikasi-Manajemen-Absensi-Praktikum
+### Disusun oleh:
+### - Laurensius Brian Prayoga - 24060124130077 - @dpbl13
+### - Aswalila Adha Putri Telaumbanua - 24060124120014 - @ Aswalilaa
+### - Johan Reinhart Calvin - 24060124130076 - @Justm3157
+### - Muhamad Hafidz Zulfikar - 24060122140141 - @hafiszulfikar
 
 ## Overview
 
@@ -136,3 +141,12 @@ Dengan adanya aplikasi ini, pengelolaan presensi praktikum diharapkan menjadi le
 - Belum terdapat integrasi basis data, autentikasi pengguna sesungguhnya, atau sinkronisasi data antarperangkat.
 - Presensi hanya dapat dilakukan pada sesi yang sedang dibuka dan satu Praktikan tidak dapat melakukan presensi berulang pada sesi yang sama.
 - Pergantian perspektif Asprak dan Praktikan digunakan untuk demonstrasi alur aplikasi, bukan sebagai sistem otorisasi pengguna yang sesungguhnya.
+
+
+# Pembagian Tugas Fitur Sprint 1
+
+| Nama Programmer | Kode SRS | Pembagian Fitur |
+|---|---|---|
+| Johan | FR-01–FR-06 | **Modul Asprak:** melihat jadwal dan detail sesi, membuka dan menutup sesi praktikum, memantau kehadiran, serta melihat rekap presensi. |
+| Aswalila | FR-07–FR-09 | **Modul Praktikan:** melihat jadwal dan detail sesi, melakukan presensi, serta melihat riwayat kehadiran pribadi. |
+| Hafidz | FR-10–FR-15 | **Integrasi UI:** pergantian perspektif Asprak/Praktikan, validasi tindakan, notifikasi, navigasi, tampilan responsif, serta data dummy dan kondisi kosong. |
