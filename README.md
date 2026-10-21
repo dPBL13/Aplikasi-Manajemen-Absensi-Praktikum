@@ -83,6 +83,7 @@ Dengan demikian, aplikasi pada tahap ini digunakan untuk menunjukkan alur penggu
 
 Dengan adanya aplikasi ini, pengelolaan presensi praktikum diharapkan menjadi lebih terstruktur dan mudah dipahami. Asisten Praktikum dapat memantau kehadiran dengan lebih praktis, sedangkan Praktikan dapat mengetahui jadwal, melakukan presensi, dan memeriksa riwayat kehadirannya melalui satu antarmuka.
 
+#
 
 # Software Requirements Specification (SRS)
 
