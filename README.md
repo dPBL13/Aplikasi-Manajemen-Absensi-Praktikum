@@ -117,7 +117,19 @@ Dengan adanya aplikasi ini, pengelolaan presensi praktikum diharapkan menjadi le
 | NFR-04 | Keandalan Interaksi | Interaksi utama berjalan dengan baik dan menangani kondisi seperti sesi belum dibuka, sesi selesai, serta presensi yang sudah tercatat. |
 | NFR-05 | Kemudahan Pengembangan | Struktur aplikasi dibuat agar mudah dipelihara dan dikembangkan pada sprint berikutnya. |
 
-### C. Batasan Implementasi Sprint 1
+### C. Kebutuhan Bisnis (BF)
+
+| Kode | Nama Kebutuhan | Deskripsi |
+|---|---|---|
+| BF-01 | Efisiensi Presensi Praktikum | Menyediakan proses pencatatan kehadiran praktikan yang lebih praktis dan terstruktur. |
+| BF-02 | Pengelolaan Sesi Praktikum | Membantu Asisten Praktikum mengelola sesi, mulai dari pembukaan hingga penutupan. |
+| BF-03 | Pemantauan Kehadiran | Memudahkan Asisten Praktikum mengetahui praktikan yang sudah dan belum melakukan presensi. |
+| BF-04 | Transparansi Informasi | Memudahkan praktikan memperoleh informasi jadwal, detail sesi, dan status praktikum. |
+| BF-05 | Akses Riwayat Presensi | Memungkinkan praktikan memeriksa catatan kehadiran pribadinya. |
+| BF-06 | Kemudahan Penggunaan | Menyediakan antarmuka yang sederhana dan mudah digunakan oleh Asprak maupun Praktikan. |
+| BF-07 | Demonstrasi Alur Praktikum | Menyediakan prototipe interaktif untuk mendemonstrasikan alur manajemen absensi pada Sprint 1 menggunakan data dummy atau lokal. |
+
+### D. Batasan Implementasi Sprint 1
 
 - Data pengguna, jadwal, sesi, dan presensi menggunakan data dummy atau lokal.
 - Perubahan data dikelola selama aplikasi berjalan; penyimpanan permanen belum menjadi fokus sprint ini.
