@@ -226,6 +226,7 @@ export default function AsprakScheduleScreen() {
   );
 }
 
+// --- STYLING MENGGUNAKAN PALET WARNA BARU ---
 const styles = StyleSheet.create({
   container: {
     flex: 1,
