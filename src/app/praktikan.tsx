@@ -1,9 +1,10 @@
-import { Text, View } from 'react-native';
+import { ThemedView } from '@/components/themed-view';
+import { PraktikanModule } from '@/features/praktikan';
 
-export default function Praktikan() {
+export default function PraktikanScreen() {
   return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
-      <Text style={{ fontSize: 18 }}>Halaman Praktikan (Tugas Aswa)</Text>
-    </View>
+    <ThemedView style={{ flex: 1 }}>
+      <PraktikanModule />
+    </ThemedView>
   );
 }
