@@ -1,135 +1,140 @@
-// FR-07 (detail sesi) + FR-08 (presensi)
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { EmptyState } from './EmptyState';
-import { StatusBadge } from './StatusBadge';
-import { CURRENT_STUDENT_ID, checkIn, devSetSessionStatus, useAttendanceStore } from './store';
-import { colors } from './theme';
-import type { CheckInResult, SessionStatus } from './types';
+import { StyleSheet, View } from 'react-native';
 
-type Feedback = { kind: 'success' | 'error' | 'info'; text: string } | null;
+import { ActionButton } from '@/components/action-button';
+import { EmptyState } from '@/components/empty-state';
+import { FeedbackBanner, type FeedbackMessage } from '@/components/feedback-banner';
+import { InfoRow } from '@/components/info-row';
+import { ScreenScroll } from '@/components/screen-scroll';
+import { SessionStatusBadge } from '@/components/status-badge';
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { Spacing } from '@/constants/theme';
+import { CURRENT_PRACTIKAN_ID } from '@/data/current-user';
+import { useAppData, dataService } from '@/services';
+import { findSession, findSessionParticipant } from '@/services/selectors';
 
-const REASON_TEXT: Record<Exclude<CheckInResult, { ok: true }>['reason'], string> = {
-  not_started: 'Sesi belum dibuka oleh asprak.',
-  closed: 'Sesi sudah ditutup, presensi tidak bisa dilakukan.',
-  already_present: 'Kamu sudah presensi di sesi ini.',
-  not_found: 'Sesi tidak ditemukan.',
-};
+/**
+ * FR-10 / FR-11 — presensi praktikan dengan validasi status sesi & presensi ganda.
+ * Aturan validasi ada di data layer (`dataService.checkIn`), bukan di layar.
+ */
+export function SessionDetailScreen({
+  sessionId,
+  onBack,
+}: {
+  sessionId: string;
+  onBack: () => void;
+}) {
+  const data = useAppData();
+  const [feedback, setFeedback] = useState<FeedbackMessage | null>(null);
+  const [busy, setBusy] = useState(false);
 
-export function SessionDetailScreen({ sessionId, onBack }: { sessionId: string; onBack: () => void }) {
-  const { sessions, attendance } = useAttendanceStore();
-  const [feedback, setFeedback] = useState<Feedback>(null);
+  const session = findSession(data, sessionId);
 
-  const session = sessions.find((s) => s.id === sessionId);
   if (!session) {
     return (
-      <View>
-        <EmptyState title="Sesi tidak ditemukan" />
-        <BackButton onBack={onBack} />
-      </View>
+      <ScreenScroll>
+        <EmptyState
+          title="Sesi tidak ditemukan"
+          hint="Sesi mungkin sudah dihapus oleh asisten praktikum."
+          actionLabel="Kembali"
+          onAction={onBack}
+        />
+      </ScreenScroll>
     );
   }
 
-  const rec = attendance.find((a) => a.sessionId === sessionId && a.studentId === CURRENT_STUDENT_ID);
-  const present = rec?.status === 'present';
-  const canCheckIn = session.status === 'ongoing' && !present;
+  const me = findSessionParticipant(session, CURRENT_PRACTIKAN_ID);
+  const present = Boolean(me?.checkInAt);
+  const canCheckIn = session.status === 'berlangsung' && !present;
 
-  const handleCheckIn = () => {
-    const res = checkIn(sessionId);
-    setFeedback(res.ok ? { kind: 'success', text: 'Presensi berhasil dicatat.' } : { kind: 'error', text: REASON_TEXT[res.reason] });
+  const handleCheckIn = async () => {
+    setBusy(true);
+    const result = await dataService.checkIn(session.id, CURRENT_PRACTIKAN_ID);
+    setBusy(false);
+
+    setFeedback(
+      result.ok
+        ? { tone: 'success', message: 'Presensi berhasil dicatat pada sesi ini.' }
+        : { tone: 'error', message: result.reason },
+    );
   };
 
   let helper = '';
-  if (present) helper = `Hadir pada pukul ${rec?.checkedInAt ?? '-'}.`;
-  else if (session.status === 'scheduled') helper = 'Presensi dibuka setelah asprak membuka sesi.';
-  else if (session.status === 'completed') helper = 'Sesi sudah selesai. Presensi terkunci.';
+
+  if (present) {
+    helper = `Kehadiran tercatat pada pukul ${me?.checkInAt}.`;
+  } else if (session.status === 'belum-dibuka') {
+    helper = 'Presensi dibuka setelah asisten praktikum membuka sesi.';
+  } else if (session.status === 'selesai') {
+    helper = 'Sesi sudah selesai, presensi terkunci.';
+  }
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
-      <BackButton onBack={onBack} />
-
-      <View style={styles.card}>
-        <View style={styles.row}>
-          <Text style={styles.title}>{session.title}</Text>
-          <StatusBadge status={session.status} />
+    <ScreenScroll>
+      <ThemedView type="backgroundElement" style={styles.card}>
+        <View style={styles.titleRow}>
+          <ThemedText type="default" style={styles.titleText}>
+            {session.courseName}
+          </ThemedText>
+          <SessionStatusBadge status={session.status} />
         </View>
-        <Info label="Mata kuliah" value={session.course} />
-        <Info label="Tanggal" value={session.date} />
-        <Info label="Waktu" value={session.time} />
-        <Info label="Ruang" value={session.room} />
-        <Info label="Status kehadiranmu" value={present ? 'Hadir' : session.status === 'completed' ? 'Tidak hadir' : 'Belum presensi'} />
-      </View>
 
-      {feedback ? (
-        <View style={[styles.banner, feedback.kind === 'success' ? styles.bannerOk : styles.bannerErr]} accessibilityLiveRegion="polite">
-          <Text style={{ color: feedback.kind === 'success' ? colors.success : colors.danger, fontWeight: '600' }}>{feedback.text}</Text>
-        </View>
-      ) : null}
+        <InfoRow label="Kelas" value={session.classGroup} />
+        <InfoRow label="Hari" value={session.dayLabel} />
+        <InfoRow label="Tanggal" value={session.dateLabel} />
+        <InfoRow label="Waktu" value={`${session.startTime} – ${session.endTime}`} />
+        <InfoRow label="Ruang" value={session.room} />
+        <InfoRow label="Asprak" value={session.asprakName} />
+        <InfoRow
+          label="Status kehadiran"
+          value={present ? `Hadir · ${me?.checkInAt}` : session.status === 'selesai' ? 'Tidak hadir' : 'Belum presensi'}
+        />
+      </ThemedView>
 
-      <Pressable
-        onPress={handleCheckIn}
-        disabled={!canCheckIn}
-        accessibilityRole="button"
-        accessibilityState={{ disabled: !canCheckIn }}
-        style={[styles.primaryBtn, !canCheckIn && styles.btnDisabled]}
-      >
-        <Text style={styles.primaryText}>{present ? '✓ Sudah Presensi' : 'Presensi Sekarang'}</Text>
-      </Pressable>
-      {helper ? <Text style={styles.helper}>{helper}</Text> : null}
+      {feedback ? <FeedbackBanner {...feedback} onDismiss={() => setFeedback(null)} /> : null}
 
-      {__DEV__ ? <DevPanel sessionId={sessionId} /> : null}
-    </ScrollView>
-  );
-}
+      <ThemedView type="backgroundElement" style={styles.card}>
+        <ThemedText type="default" style={styles.sectionTitle}>
+          Presensi
+        </ThemedText>
 
-function Info({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.infoRow}>
-      <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue}>{value}</Text>
-    </View>
-  );
-}
+        <ActionButton
+          label={busy ? 'Mencatat…' : present ? '✓ Sudah Presensi' : 'Presensi Sekarang'}
+          onPress={handleCheckIn}
+          disabled={!canCheckIn || busy}
+        />
 
-function BackButton({ onBack }: { onBack: () => void }) {
-  return (
-    <Pressable onPress={onBack} accessibilityRole="button" style={{ alignSelf: 'flex-start', paddingVertical: 4 }}>
-      <Text style={{ color: colors.primary, fontWeight: '600' }}>← Kembali ke daftar sesi</Text>
-    </Pressable>
-  );
-}
+        {helper ? (
+          <ThemedText type="small" themeColor="textSecondary">
+            {helper}
+          </ThemedText>
+        ) : null}
+      </ThemedView>
 
-function DevPanel({ sessionId }: { sessionId: string }) {
-  const opts: SessionStatus[] = ['scheduled', 'ongoing', 'completed'];
-  return (
-    <View style={styles.dev}>
-      <Text style={styles.devTitle}>Mode dev: ubah status sesi</Text>
-      <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-        {opts.map((o) => (
-          <Pressable key={o} onPress={() => devSetSessionStatus(sessionId, o)} style={styles.devBtn}>
-            <Text style={{ color: colors.text, fontSize: 12 }}>{o}</Text>
-          </Pressable>
-        ))}
-      </View>
-    </View>
+      <ActionButton label="← Kembali ke daftar sesi" tone="secondary" onPress={onBack} />
+    </ScreenScroll>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.card, borderRadius: 14, padding: 16, borderWidth: 1, borderColor: colors.border, gap: 10 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 },
-  title: { flex: 1, fontSize: 18, fontWeight: '700', color: colors.text },
-  infoRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  infoLabel: { fontSize: 13, color: colors.muted },
-  infoValue: { fontSize: 14, color: colors.text, fontWeight: '500', flexShrink: 1, textAlign: 'right' },
-  banner: { padding: 12, borderRadius: 10 },
-  bannerOk: { backgroundColor: colors.successBg },
-  bannerErr: { backgroundColor: colors.dangerBg },
-  primaryBtn: { backgroundColor: colors.primary, paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
-  btnDisabled: { backgroundColor: colors.primaryDisabled },
-  primaryText: { color: colors.onPrimary, fontSize: 16, fontWeight: '700' },
-  helper: { textAlign: 'center', color: colors.muted, fontSize: 13 },
-  dev: { borderWidth: 1, borderStyle: 'dashed', borderColor: colors.border, borderRadius: 12, padding: 12, gap: 8 },
-  devTitle: { fontSize: 12, color: colors.muted },
-  devBtn: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: colors.neutralBg },
+  card: {
+    width: '100%',
+    padding: Spacing.three,
+    borderRadius: Spacing.three,
+    gap: Spacing.two,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: Spacing.two,
+  },
+  titleText: {
+    flexShrink: 1,
+    fontWeight: 600,
+  },
+  sectionTitle: {
+    fontWeight: 600,
+  },
 });
