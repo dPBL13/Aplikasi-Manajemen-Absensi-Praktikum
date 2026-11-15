@@ -1,3 +1,7 @@
+/*
+ * FR-14: Praktikan dapat melihat riwayat kehadiran pribadi berdasarkan data yang tersimpan di Firestore.
+ * Implementasi menampilkan ringkasan (hadir, izin, diterima, persentase) serta list sesi dengan status kehadiran.
+ */
 import { EmptyState } from '@/components/empty-state';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
