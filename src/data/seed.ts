@@ -1,0 +1,302 @@
+import { CURRENT_ASPRAK_NAME } from '@/data/current-user';
+import type {
+  Participant,
+  Permit,
+  PracticumClass,
+  PracticumSession,
+} from '@/types/domain';
+
+/**
+ * DATA SEED DEMO — hanya dipakai oleh adapter mock (`src/services/mock`).
+ *
+ * Saat adapter Firestore dipasang, file ini tidak lagi dipakai aplikasi.
+ * Jangan menaruh logika bisnis di sini.
+ */
+
+const ASPRAK = CURRENT_ASPRAK_NAME;
+const CREATED_AT = '2026-10-01T09:00:00.000Z';
+
+const roster = (
+  classId: string,
+  start: number,
+  names: string[],
+  nimPrefix: string,
+): Participant[] =>
+  names.map((name, index) => ({
+    id: `p${start + index}`,
+    classId,
+    name,
+    nim: `${nimPrefix}${String(index + 1).padStart(3, '0')}`,
+  }));
+
+const mobileRoster = roster(
+  'cls-mobile-a',
+  1,
+  [
+    'Anisa Rahmawati',
+    'Bagas Prakoso',
+    'Citra Lestari',
+    'Dimas Saputra',
+    'Eka Putri',
+    'Fajar Nugroho',
+    'Gita Maharani',
+    'Hendra Wijaya',
+  ],
+  '240601221400',
+);
+
+const databaseRoster = roster(
+  'cls-basisdata-b',
+  9,
+  [
+    'Indah Permata',
+    'Joko Susilo',
+    'Kartika Sari',
+    'Lukman Hakim',
+    'Maya Anggraini',
+    'Naufal Rizki',
+    'Olivia Sanjaya',
+    'Putra Mahendra',
+  ],
+  '240601221401',
+);
+
+const structureRoster = roster(
+  'cls-struktur-c',
+  17,
+  [
+    'Qori Amalia',
+    'Rangga Pratama',
+    'Sinta Dewi',
+    'Taufik Hidayat',
+    'Umi Kalsum',
+    'Vino Alfarizi',
+    'Wulan Sari',
+    'Yoga Prasetyo',
+  ],
+  '240601221402',
+);
+
+export const seedClasses: PracticumClass[] = [
+  {
+    id: 'cls-mobile-a',
+    courseName: 'Praktikum Pemrograman Mobile',
+    code: 'IF-301',
+    classGroup: 'Kelas A',
+    room: 'Lab Komputer 3',
+    asprakName: ASPRAK,
+    description: 'Praktikum pengembangan aplikasi mobile dengan React Native.',
+    createdAt: CREATED_AT,
+    participants: mobileRoster,
+  },
+  {
+    id: 'cls-basisdata-b',
+    courseName: 'Praktikum Basis Data',
+    code: 'IF-205',
+    classGroup: 'Kelas B',
+    room: 'Lab Komputer 1',
+    asprakName: ASPRAK,
+    description: 'Perancangan basis data relasional dan query SQL.',
+    createdAt: CREATED_AT,
+    participants: databaseRoster,
+  },
+  {
+    id: 'cls-struktur-c',
+    courseName: 'Praktikum Struktur Data',
+    code: 'IF-210',
+    classGroup: 'Kelas C',
+    room: 'Lab Komputer 2',
+    asprakName: ASPRAK,
+    description: 'Implementasi struktur data dasar dalam bahasa C.',
+    createdAt: CREATED_AT,
+    participants: structureRoster,
+  },
+];
+
+const rosterForSession = (
+  participants: Participant[],
+  attendance: Record<string, string> = {},
+): PracticumSession['participants'] =>
+  participants.map((participant) => ({
+    ...participant,
+    checkInAt: attendance[participant.id],
+  }));
+
+export const seedSessions: PracticumSession[] = [
+  {
+    id: 'ses-mobile-1',
+    classId: 'cls-mobile-a',
+    courseName: 'Praktikum Pemrograman Mobile',
+    classGroup: 'Kelas A',
+    room: 'Lab Komputer 3',
+    dayLabel: 'Senin',
+    dateLabel: '19 Oktober 2026',
+    startTime: '08:00',
+    endTime: '10:00',
+    asprakName: ASPRAK,
+    status: 'selesai',
+    openedAt: '08:00',
+    closedAt: '10:02',
+    closingNote: 'Praktikum selesai tepat waktu.',
+    participants: rosterForSession(mobileRoster, {
+      p1: '08:02',
+      p2: '08:05',
+      p3: '08:09',
+      p4: '08:14',
+      p5: '08:21',
+    }),
+  },
+  {
+    id: 'ses-mobile-2',
+    classId: 'cls-mobile-a',
+    courseName: 'Praktikum Pemrograman Mobile',
+    classGroup: 'Kelas A',
+    room: 'Lab Komputer 3',
+    dayLabel: 'Senin',
+    dateLabel: '26 Oktober 2026',
+    startTime: '08:00',
+    endTime: '10:00',
+    asprakName: ASPRAK,
+    status: 'berlangsung',
+    openedAt: '08:00',
+    participants: rosterForSession(mobileRoster, {
+      p2: '08:03',
+      p3: '08:07',
+    }),
+  },
+  {
+    id: 'ses-mobile-3',
+    classId: 'cls-mobile-a',
+    courseName: 'Praktikum Pemrograman Mobile',
+    classGroup: 'Kelas A',
+    room: 'Lab Komputer 3',
+    dayLabel: 'Senin',
+    dateLabel: '2 November 2026',
+    startTime: '08:00',
+    endTime: '10:00',
+    asprakName: ASPRAK,
+    status: 'belum-dibuka',
+    participants: rosterForSession(mobileRoster),
+  },
+  {
+    id: 'ses-basisdata-1',
+    classId: 'cls-basisdata-b',
+    courseName: 'Praktikum Basis Data',
+    classGroup: 'Kelas B',
+    room: 'Lab Komputer 1',
+    dayLabel: 'Selasa',
+    dateLabel: '27 Oktober 2026',
+    startTime: '10:00',
+    endTime: '12:00',
+    asprakName: ASPRAK,
+    status: 'belum-dibuka',
+    participants: rosterForSession(databaseRoster),
+  },
+  {
+    id: 'ses-struktur-1',
+    classId: 'cls-struktur-c',
+    courseName: 'Praktikum Struktur Data',
+    classGroup: 'Kelas C',
+    room: 'Lab Komputer 2',
+    dayLabel: 'Rabu',
+    dateLabel: '28 Oktober 2026',
+    startTime: '13:00',
+    endTime: '15:00',
+    asprakName: ASPRAK,
+    status: 'selesai',
+    openedAt: '13:00',
+    closedAt: '15:00',
+    closingNote: 'Sesi ditutup tepat waktu.',
+    participants: rosterForSession(structureRoster, {
+      p17: '13:03',
+      p18: '13:06',
+      p19: '13:10',
+      p20: '13:15',
+      p21: '13:24',
+      p22: '13:31',
+    }),
+  },
+];
+
+export const seedPermits: Permit[] = [
+  {
+    id: 'izin-1',
+    sessionId: 'ses-mobile-2',
+    classId: 'cls-mobile-a',
+    participantId: 'p4',
+    participantName: 'Dimas Saputra',
+    nim: '240601221400004',
+    courseName: 'Praktikum Pemrograman Mobile',
+    reason: 'Sakit demam, sudah ada surat keterangan dokter.',
+    submittedAt: '2026-10-25T14:10:00.000Z',
+    aiCategory: 'sakit',
+    aiConfidence: 0.92,
+    aiModel: 'llm-classifier-v1',
+    status: 'menunggu',
+  },
+  {
+    id: 'izin-2',
+    sessionId: 'ses-mobile-2',
+    classId: 'cls-mobile-a',
+    participantId: 'p5',
+    participantName: 'Eka Putri',
+    nim: '240601221400005',
+    courseName: 'Praktikum Pemrograman Mobile',
+    reason: 'Mewakili fakultas pada lomba debat tingkat nasional.',
+    submittedAt: '2026-10-25T16:45:00.000Z',
+    aiCategory: 'acara-kampus',
+    aiConfidence: 0.78,
+    aiModel: 'llm-classifier-v1',
+    status: 'menunggu',
+  },
+  {
+    id: 'izin-3',
+    sessionId: 'ses-mobile-2',
+    classId: 'cls-mobile-a',
+    participantId: 'p6',
+    participantName: 'Fajar Nugroho',
+    nim: '240601221400006',
+    courseName: 'Praktikum Pemrograman Mobile',
+    reason: 'Harus menemani orang tua ke rumah sakit.',
+    submittedAt: '2026-10-26T06:30:00.000Z',
+    aiCategory: 'belum-diklasifikasi',
+    aiConfidence: null,
+    status: 'menunggu',
+  },
+  {
+    id: 'izin-4',
+    sessionId: 'ses-struktur-1',
+    classId: 'cls-struktur-c',
+    participantId: 'p23',
+    participantName: 'Wulan Sari',
+    nim: '240601221402007',
+    courseName: 'Praktikum Struktur Data',
+    reason: 'Acara keluarga di luar kota yang tidak bisa ditinggalkan.',
+    submittedAt: '2026-10-27T09:12:00.000Z',
+    aiCategory: 'keluarga',
+    aiConfidence: 0.88,
+    aiModel: 'llm-classifier-v1',
+    status: 'diterima',
+    decidedAt: '2026-10-27T10:05:00.000Z',
+    decidedBy: ASPRAK,
+    decisionNote: 'Surat izin sudah diverifikasi.',
+  },
+  {
+    id: 'izin-5',
+    sessionId: 'ses-struktur-1',
+    classId: 'cls-struktur-c',
+    participantId: 'p24',
+    participantName: 'Yoga Prasetyo',
+    nim: '240601221402008',
+    courseName: 'Praktikum Struktur Data',
+    reason: 'Ada kegiatan lain.',
+    submittedAt: '2026-10-27T11:40:00.000Z',
+    aiCategory: 'lainnya',
+    aiConfidence: 0.41,
+    aiModel: 'llm-classifier-v1',
+    status: 'ditolak',
+    decidedAt: '2026-10-27T12:15:00.000Z',
+    decidedBy: ASPRAK,
+    decisionNote: 'Alasan belum cukup jelas, silakan hubungi asisten.',
+  },
+];

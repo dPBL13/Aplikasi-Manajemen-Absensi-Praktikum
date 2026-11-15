@@ -5,7 +5,7 @@ import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
 
 import { Palette, Spacing } from '@/constants/theme';
-import type { PracticumSession } from '@/types/session';
+import type { PracticumSession } from '@/types/domain';
 
 type SessionCardProps = {
   session: PracticumSession;
