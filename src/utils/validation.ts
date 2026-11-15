@@ -1,6 +1,13 @@
 import type { RegisterInput } from '@/types/auth';
 
-export const DEFAULT_ASPRAK_TOKEN =
+// FR-23: Validasi alasan izin
+export const validateReason = (reason: string): { ok: boolean; message?: string } => {
+  const trimmed = reason.trim();
+  if (!trimmed) return { ok: false, message: 'Alasan izin wajib diisi.' };
+  if (trimmed.length < 5) return { ok: false, message: 'Alasan izin terlalu singkat (minimum 5 karakter).' };
+  return { ok: true };
+};
+
   process.env.EXPO_PUBLIC_ASPRAK_SECRET_TOKEN || 'ASPRAK2026';
 
 export const validateNIM = (nim: string): boolean => {

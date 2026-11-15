@@ -6,7 +6,6 @@ import { SessionStatusBadge } from '@/components/status-badge';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
-import { CURRENT_PRACTIKAN_ID } from '@/data/current-user';
 import { useTheme } from '@/hooks/use-theme';
 import { dataService, useAppData } from '@/services';
 import { findSession, findSessionParticipant } from '@/services/selectors';
@@ -16,6 +15,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { AICard } from './components/AICard';
 import { LeaveStatusBadge } from './components/LeaveStatusBadge';
 import { LeaveRequestModal } from './LeaveRequestModal';
+import { useCurrentPraktikan } from './use-current-praktikan';
 
 /*
  * FR-10 & FR-11: Implementasi presensi (check‑in) untuk praktikan serta pencegahan presensi ganda.
@@ -26,6 +26,8 @@ import { LeaveRequestModal } from './LeaveRequestModal';
 export function SessionDetailScreen({ sessionId, onBack }: { sessionId: string; onBack: () => void; }) {
   const theme = useTheme();
   const data = useAppData();
+  const currentUser = useCurrentPraktikan();
+  const CURRENT_PRACTIKAN_ID = currentUser.id;
   const [feedback, setFeedback] = useState<FeedbackMessage | null>(null);
   const [busy, setBusy] = useState(false);
   const [isLeaveModalVisible, setIsLeaveModalVisible] = useState(false);
@@ -125,7 +127,7 @@ export function SessionDetailScreen({ sessionId, onBack }: { sessionId: string; 
                   : 'Belum Melakukan Presensi'}
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
-            Praktikan: {me?.name} ({me?.nim})
+            Praktikan: {me?.name ?? currentUser.name} ({me?.nim ?? currentUser.nim})
           </ThemedText>
         </ThemedView>
         <ThemedText type="small" themeColor="textSecondary" style={styles.helperText}>{helper}</ThemedText>
