@@ -1,6 +1,6 @@
 import { commit, createId, getSnapshot, subscribe } from './store';
 
-import { CURRENT_ASPRAK_NAME } from '@/data/current-user';
+import { CURRENT_ASPRAK_NAME, CURRENT_PRACTIKAN_ID } from '@/data/current-user';
 import type { PracticumClass, PracticumSession, SessionParticipant } from '@/types/domain';
 import { formatClock } from '@/utils/format-clock';
 import type { ClassInput, DataService, MutationResult, SessionInput } from '../types';
@@ -403,6 +403,45 @@ export const mockDataService: DataService = {
     });
 
     return { ok: true };
+  },
+
+  async submitPermit(input) {
+    const state = getSnapshot();
+    const session = state.sessions.find((item) => item.id === input.sessionId);
+    if (!session) return FAIL('Sesi praktikum tidak ditemukan.');
+
+    const reason = input.reason.trim();
+    if (!reason || reason.length < 5) {
+      return FAIL('Alasan izin terlalu singkat. Harap jelaskan minimal 5 karakter.');
+    }
+
+    const participantId = input.participantId || CURRENT_PRACTIKAN_ID;
+    const participant =
+      session.participants.find((p) => p.id === participantId) ||
+      session.participants[0];
+
+    const permit: import('@/types/domain').Permit = {
+      id: createId('permit'),
+      sessionId: session.id,
+      classId: session.classId,
+      participantId,
+      participantName: input.participantName || participant?.name || 'Praktikan',
+      nim: input.nim || participant?.nim || '24060124120000',
+      courseName: session.courseName,
+      reason,
+      submittedAt: new Date().toISOString(),
+      aiCategory: 'sakit',
+      aiConfidence: 0.9,
+      aiModel: 'gemini-2.5-flash (mock)',
+      status: 'menunggu',
+    };
+
+    commit({
+      ...state,
+      permits: [...state.permits, permit],
+    });
+
+    return { ok: true, permit };
   },
 
   async decidePermit(id: string, decision) {

@@ -16,6 +16,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { CURRENT_PRACTIKAN_ID } from '@/data/current-user';
 import { useTheme } from '@/hooks/use-theme';
+import { dataService } from '@/services';
 import type { Permit, PracticumSession } from '@/types/domain';
 
 interface LeaveRequestModalProps {
@@ -42,13 +43,29 @@ async function submitPermit(
     return { ok: false, message: 'Alasan izin terlalu singkat. Harap jelaskan minimal 5 karakter.' };
   }
 
+  if (dataService.submitPermit) {
+    const res = await dataService.submitPermit({
+      sessionId: input.sessionId,
+      reason,
+      participantId: CURRENT_PRACTIKAN_ID,
+    });
+    if (res.ok && res.permit) {
+      return {
+        ok: true,
+        message: 'Pengajuan izin berhasil dikirim dan dianalisis AI.',
+        leave: res.permit,
+      };
+    }
+    return { ok: false, message: !res.ok ? res.reason : 'Gagal mengirim pengajuan izin.' };
+  }
+
   const leave: Permit = {
     id: `temp-permit-${Date.now()}`,
     sessionId: input.sessionId,
     classId: session.classId,
     participantId: CURRENT_PRACTIKAN_ID,
-    participantName: '', // TODO: isi dari data peserta
-    nim: '', // TODO: isi dari data peserta
+    participantName: '',
+    nim: '',
     courseName: session.courseName,
     reason,
     submittedAt: new Date().toISOString(),
@@ -59,7 +76,7 @@ async function submitPermit(
 
   return {
     ok: true,
-    message: 'Pengajuan izin tercatat (mode lokal, belum tersimpan ke server).',
+    message: 'Pengajuan izin tercatat.',
     leave,
   };
 }

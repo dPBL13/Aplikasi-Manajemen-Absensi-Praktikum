@@ -4,6 +4,7 @@ import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { Colors } from '@/constants/theme';
+import { AuthProvider } from '@/context/auth-context';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -37,18 +38,22 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={navigationTheme}>
-      <AnimatedSplashOverlay />
-      <Stack
-        screenOptions={{
-          headerStyle: { backgroundColor: theme.backgroundSelected },
-          headerTintColor: theme.text,
-          headerTitleStyle: { fontWeight: 600, fontSize: 18 },
-          contentStyle: { backgroundColor: theme.background },
-        }}>
-        <Stack.Screen name="index" options={{ title: 'Manajemen Absensi Praktikum' }} />
-        <Stack.Screen name="asprak" options={{ headerShown: false }} />
-        <Stack.Screen name="praktikan" options={{ headerShown: false }} />
-      </Stack>
+      <AuthProvider>
+        <AnimatedSplashOverlay />
+        <Stack
+          screenOptions={{
+            headerStyle: { backgroundColor: theme.backgroundSelected },
+            headerTintColor: theme.text,
+            headerTitleStyle: { fontWeight: 600, fontSize: 18 },
+            contentStyle: { backgroundColor: theme.background },
+          }}>
+          <Stack.Screen name="index" options={{ title: 'Manajemen Absensi Praktikum' }} />
+          <Stack.Screen name="asprak" options={{ headerShown: false }} />
+          <Stack.Screen name="praktikan" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        </Stack>
+      </AuthProvider>
     </ThemeProvider>
   );
+
 }
