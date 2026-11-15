@@ -1,3 +1,8 @@
+/*
+ * FR-07 & FR-09: Tampilkan jadwal praktikum serta detail sesi untuk praktikan.
+ * Implementasi ini menyiapkan list sesi dengan filter status, navigasi ke detail
+ * layar, serta menampilkan status izin dan presensi.  
+ */
 import { useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 
