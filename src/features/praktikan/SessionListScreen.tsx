@@ -1,21 +1,14 @@
-/*
- * FR-07 & FR-09: Tampilkan jadwal praktikum serta detail sesi untuk praktikan.
- * Implementasi ini menyiapkan list sesi dengan filter status, navigasi ke detail
- * layar, serta menampilkan status izin dan presensi.  
- */
-import { useEffect, useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, View } from 'react-native';
-
 import { EmptyState } from '@/components/empty-state';
 import { SessionStatusBadge } from '@/components/status-badge';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
-import { CURRENT_PRACTIKAN_ID } from '@/data/current-user';
 import { useTheme } from '@/hooks/use-theme';
 import { useAppData } from '@/services';
 import { findSessionParticipant, sessionsForParticipant } from '@/services/selectors';
-
+import { useEffect, useMemo, useState } from 'react';
+import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { useCurrentPraktikan } from './use-current-praktikan';
 
 type StatusFilter = 'semua' | 'berlangsung' | 'belum-dibuka' | 'selesai';
 
@@ -33,6 +26,8 @@ interface SessionListScreenProps {
 export function SessionListScreen({ onSelect }: SessionListScreenProps) {
   const theme = useTheme();
   const data = useAppData();
+  const currentUser = useCurrentPraktikan();
+  const CURRENT_PRACTIKAN_ID = currentUser.id;
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('semua');
 

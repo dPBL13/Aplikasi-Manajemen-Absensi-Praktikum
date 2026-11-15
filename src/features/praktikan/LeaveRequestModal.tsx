@@ -1,3 +1,9 @@
+/*
+ * FR-16: Formulir pengajuan izin praktikan.
+ * - Tidak ada kolom "Catatan / Bukti Tambahan".
+ * - Hanya mengirim alasan, sessionId, participantId.
+ * - participantName dan nim dibiarkan string kosong.
+ */
 import { useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -14,10 +20,10 @@ import { ActionButton } from '@/components/action-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
-import { CURRENT_PRACTIKAN_ID } from '@/data/current-user';
 import { useTheme } from '@/hooks/use-theme';
 import { dataService } from '@/services';
 import type { Permit, PracticumSession } from '@/types/domain';
+import { useCurrentPraktikan } from './use-current-praktikan';
 
 interface LeaveRequestModalProps {
   visible: boolean;
@@ -29,12 +35,13 @@ interface LeaveRequestModalProps {
 type SubmitResult = { ok: true; message: string; leave: Permit } | { ok: false; message: string };
 
 /**
- * Pengganti sementara. Hanya memvalidasi dan membentuk objek Permit, TIDAK disimpan ke store.
- * TODO: ganti dengan dataService.submitPermit (belum tersimpan ke store, belum muncul di tab izin asisten).
+ * Memakai dataService.submitPermit bila tersedia (Firestore + klasifikasi AI).
+ * Bila tidak tersedia, jatuh ke objek lokal yang TIDAK disimpan ke store.
  */
 async function submitPermit(
   input: { sessionId: string; reason: string },
   session: PracticumSession,
+  user: { id: string; name: string; nim: string },
 ): Promise<SubmitResult> {
   const reason = input.reason.trim();
 
@@ -47,7 +54,9 @@ async function submitPermit(
     const res = await dataService.submitPermit({
       sessionId: input.sessionId,
       reason,
-      participantId: CURRENT_PRACTIKAN_ID,
+      participantId: user.id,
+      participantName: user.name,
+      nim: user.nim,
     });
     if (res.ok && res.permit) {
       return {
@@ -63,9 +72,9 @@ async function submitPermit(
     id: `temp-permit-${Date.now()}`,
     sessionId: input.sessionId,
     classId: session.classId,
-    participantId: CURRENT_PRACTIKAN_ID,
-    participantName: '',
-    nim: '',
+    participantId: user.id,
+    participantName: user.name,
+    nim: user.nim,
     courseName: session.courseName,
     reason,
     submittedAt: new Date().toISOString(),
@@ -76,13 +85,14 @@ async function submitPermit(
 
   return {
     ok: true,
-    message: 'Pengajuan izin tercatat.',
+    message: 'Pengajuan izin tercatat (mode lokal, belum tersimpan ke server).',
     leave,
   };
 }
 
 export function LeaveRequestModal({ visible, session, onClose, onSuccess }: LeaveRequestModalProps) {
   const theme = useTheme();
+  const currentUser = useCurrentPraktikan();
 
   const [reason, setReason] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -99,7 +109,7 @@ export function LeaveRequestModal({ visible, session, onClose, onSuccess }: Leav
     setErrorMsg(null);
     setIsSubmitting(true);
     try {
-      const res = await submitPermit({ sessionId: session.id, reason }, session);
+      const res = await submitPermit({ sessionId: session.id, reason }, session, currentUser);
       if (res.ok) {
         onSuccess(res.message);
         handleClose();

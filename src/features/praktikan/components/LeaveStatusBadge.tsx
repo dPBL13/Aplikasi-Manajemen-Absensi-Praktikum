@@ -1,8 +1,7 @@
-import { StyleSheet, View } from 'react-native';
-
 import { ThemedText } from '@/components/themed-text';
 import { Palette } from '@/constants/theme';
 import type { PermitStatus } from '@/types/domain';
+import { StyleSheet, View } from 'react-native';
 
 type LeaveBadgeMeta = {
   label: string;

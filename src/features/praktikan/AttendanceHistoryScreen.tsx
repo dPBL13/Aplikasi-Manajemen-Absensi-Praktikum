@@ -1,17 +1,19 @@
 import { EmptyState } from '@/components/empty-state';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { CURRENT_PRACTIKAN_ID } from '@/data/current-user';
 import { useTheme } from '@/hooks/use-theme';
 import { useAppData } from '@/services';
 import { findSessionParticipant, sessionsForParticipant } from '@/services/selectors';
 import { FlatList, StyleSheet, View } from 'react-native';
 import { AICard } from './components/AICard';
 import { LeaveStatusBadge } from './components/LeaveStatusBadge';
+import { useCurrentPraktikan } from './use-current-praktikan';
 
 export function AttendanceHistoryScreen() {
   const theme = useTheme();
   const data = useAppData();
+  const currentUser = useCurrentPraktikan();
+  const CURRENT_PRACTIKAN_ID = currentUser.id;
 
   const sessions = sessionsForParticipant(data, CURRENT_PRACTIKAN_ID);
   const permits = (data.permits ?? []).filter((p) => p.participantId === CURRENT_PRACTIKAN_ID);
@@ -19,6 +21,8 @@ export function AttendanceHistoryScreen() {
   const identity = data.classes
     .flatMap((c) => c.participants)
     .find((p) => p.id === CURRENT_PRACTIKAN_ID);
+  const displayName = identity?.name ?? currentUser.name;
+  const displayNim = identity?.nim ?? currentUser.nim;
 
   const attended = sessions.filter((s) =>
     Boolean(findSessionParticipant(s, CURRENT_PRACTIKAN_ID)?.checkInAt),
@@ -30,7 +34,7 @@ export function AttendanceHistoryScreen() {
     <View style={styles.container}>
       <ThemedView type="backgroundElement" style={[styles.summary, { borderColor: theme.border }]}>
         <ThemedText style={styles.name}>
-          {identity ? `${identity.name} (${identity.nim})` : '-'}
+          {displayName ? `${displayName} (${displayNim})` : '-'}
         </ThemedText>
         <View style={styles.statsRow}>
           <ThemedText>Hadir: {attended}</ThemedText>
