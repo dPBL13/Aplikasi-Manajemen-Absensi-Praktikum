@@ -9,6 +9,8 @@
 
 Aplikasi Manajemen Absensi Praktikum adalah aplikasi yang dirancang untuk membantu proses pengelolaan dan pencatatan kehadiran dalam kegiatan praktikum. Aplikasi ini menyediakan antarmuka bagi Asisten Praktikum (Asprak) untuk mengelola sesi praktikum dan memantau kehadiran, serta bagi Praktikan untuk melihat jadwal dan melakukan presensi dengan mudah.
 
+> **Kontributor / AI agent:** baca [`AI_CONTEXT.md`](./AI_CONTEXT.md) lebih dulu. Isinya peta arsitektur, model data kanonik, kontrak `DataService`, peta rute, pembagian FR, dan langkah integrasi Firestore. Aturan visual ada di [`UI_STYLE_GUIDE.md`](./UI_STYLE_GUIDE.md).
+
 Aplikasi ini dikembangkan untuk membuat alur presensi praktikum lebih terstruktur, jelas, dan mudah digunakan, mulai dari pembukaan sesi hingga penutupan sesi dan pemeriksaan rekap kehadiran.
 
 ## Tujuan

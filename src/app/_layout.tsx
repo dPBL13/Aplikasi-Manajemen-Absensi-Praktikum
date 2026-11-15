@@ -1,14 +1,21 @@
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme, View, Text } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import { SessionProvider } from '@/context/session-context';
 import { Colors } from '@/constants/theme';
 
 SplashScreen.preventAutoHideAsync();
 
+/**
+ * Root navigator.
+ *
+ * - `index`      : pemilih peran (sementara, sampai modul autentikasi siap).
+ * - `asprak`     : seluruh modul Asisten Praktikum (FR-05 – FR-09, FR-12/13, FR-19/20).
+ * - `praktikan`  : seluruh modul Praktikan (FR-07, FR-09 – FR-11, FR-14).
+ *
+ * Setiap modul punya Stack + Tabs sendiri di dalam foldernya.
+ */
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -30,45 +37,18 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={navigationTheme}>
-      <SessionProvider>
-        <AnimatedSplashOverlay />
-        <Stack
-          screenOptions={{
-            header: ({ options }) => (
-              <SafeAreaView
-                edges={['top']}
-                style={{
-                  backgroundColor: theme.backgroundSelected,
-                }}
-              >
-                <View
-                  style={{
-                    height: 40, 
-                    justifyContent: 'center',
-                    paddingHorizontal: 16,
-                    borderBottomWidth: 1,
-                    borderBottomColor: theme.background,
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontSize: 20,
-                      fontWeight: '600',
-                      color: theme.text,
-                    }}
-                  >
-                    {options.title}
-                  </Text>
-                </View>
-              </SafeAreaView>
-            ),
-          }}
-        >
-          <Stack.Screen name="index" options={{ title: 'Jadwal Praktikum',headerShown:true }} />
-          <Stack.Screen name="session/[id]" options={{ title: 'Detail Sesi' }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        </Stack>
-      </SessionProvider>
+      <AnimatedSplashOverlay />
+      <Stack
+        screenOptions={{
+          headerStyle: { backgroundColor: theme.backgroundSelected },
+          headerTintColor: theme.text,
+          headerTitleStyle: { fontWeight: 600, fontSize: 18 },
+          contentStyle: { backgroundColor: theme.background },
+        }}>
+        <Stack.Screen name="index" options={{ title: 'Manajemen Absensi Praktikum' }} />
+        <Stack.Screen name="asprak" options={{ headerShown: false }} />
+        <Stack.Screen name="praktikan" options={{ headerShown: false }} />
+      </Stack>
     </ThemeProvider>
   );
 }

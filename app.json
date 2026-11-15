@@ -46,7 +46,7 @@
       "@react-native-google-signin/google-signin"
     ],
     "experiments": {
-      "typedRoutes": true,
+      "typedRoutes": false,
       "reactCompiler": true
     },
     "extra": {
