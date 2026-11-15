@@ -1,126 +1,103 @@
-import { FlatList, StyleSheet, View } from 'react-native';
-
 import { EmptyState } from '@/components/empty-state';
-import { StatTile } from '@/components/stat-tile';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { CURRENT_PRACTIKAN_ID } from '@/data/current-user';
 import { useTheme } from '@/hooks/use-theme';
 import { useAppData } from '@/services';
 import { findSessionParticipant, sessionsForParticipant } from '@/services/selectors';
+import { FlatList, StyleSheet, View } from 'react-native';
+import { AICard } from './components/AICard';
+import { LeaveStatusBadge } from './components/LeaveStatusBadge';
 
-/** FR-14 — riwayat kehadiran pribadi praktikan. */
 export function AttendanceHistoryScreen() {
-  const data = useAppData();
   const theme = useTheme();
+  const data = useAppData();
+
   const sessions = sessionsForParticipant(data, CURRENT_PRACTIKAN_ID);
-  const finished = sessions.filter((session) => session.status !== 'belum-dibuka');
-  const attended = finished.filter(
-    (session) => findSessionParticipant(session, CURRENT_PRACTIKAN_ID)?.checkInAt,
+  const permits = (data.permits ?? []).filter((p) => p.participantId === CURRENT_PRACTIKAN_ID);
+
+  const identity = data.classes
+    .flatMap((c) => c.participants)
+    .find((p) => p.id === CURRENT_PRACTIKAN_ID);
+
+  const attended = sessions.filter((s) =>
+    Boolean(findSessionParticipant(s, CURRENT_PRACTIKAN_ID)?.checkInAt),
   ).length;
-  const rate = finished.length === 0 ? 0 : Math.round((attended / finished.length) * 100);
+  const approved = permits.filter((p) => p.status === 'diterima').length;
+  const rate = sessions.length === 0 ? 0 : Math.round((attended / sessions.length) * 100);
 
   return (
-    <FlatList
-      style={[styles.container, { backgroundColor: theme.background }]}
-      data={sessions}
-      keyExtractor={(session) => session.id}
-      contentContainerStyle={styles.content}
-      ListHeaderComponent={
-        <View style={styles.header}>
-          <View style={styles.heading}>
-            <ThemedText type="subtitle" style={styles.title}>
-              Riwayat Kehadiran
-            </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              Rekap presensi Anda pada seluruh sesi yang diikuti.
-            </ThemedText>
-          </View>
-
-          <View style={styles.statRow}>
-            <StatTile label="Hadir" value={`${attended}`} hint="Sesi tercatat" />
-            <StatTile label="Total Sesi" value={`${sessions.length}`} />
-            <StatTile label="Persentase" value={`${rate}%`} hint="Dari sesi terbuka" />
-          </View>
+    <View style={styles.container}>
+      <ThemedView type="backgroundElement" style={[styles.summary, { borderColor: theme.border }]}>
+        <ThemedText style={styles.name}>
+          {identity ? `${identity.name} (${identity.nim})` : '-'}
+        </ThemedText>
+        <View style={styles.statsRow}>
+          <ThemedText>Hadir: {attended}</ThemedText>
+          <ThemedText>Izin: {permits.length}</ThemedText>
+          <ThemedText>Diterima: {approved}</ThemedText>
+          <ThemedText>Kehadiran: {rate}%</ThemedText>
         </View>
-      }
-      renderItem={({ item }) => {
-        const me = findSessionParticipant(item, CURRENT_PRACTIKAN_ID);
-        const present = Boolean(me?.checkInAt);
-        const label = present
-          ? `Hadir · ${me?.checkInAt}`
-          : item.status === 'selesai'
-            ? 'Tidak hadir'
-            : item.status === 'berlangsung'
-              ? 'Belum presensi'
-              : 'Sesi belum dibuka';
-        const color = present
-          ? theme.success
-          : item.status === 'selesai'
-            ? theme.danger
-            : theme.textSecondary;
+      </ThemedView>
 
-        return (
-          <ThemedView type="backgroundElement" style={styles.card}>
-            <View style={styles.info}>
-              <ThemedText type="small">{item.courseName}</ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                {item.dayLabel}, {item.dateLabel} · {item.startTime}–{item.endTime}
+      <FlatList
+        data={sessions}
+        keyExtractor={(s) => s.id}
+        contentContainerStyle={styles.list}
+        ListEmptyComponent={
+          <EmptyState
+            title="Belum ada riwayat"
+            hint="Riwayat muncul setelah kamu terdaftar di sesi praktikum."
+          />
+        }
+        renderItem={({ item }) => {
+          const me = findSessionParticipant(item, CURRENT_PRACTIKAN_ID);
+          const leave = permits.find((p) => p.sessionId === item.id);
+          const hadir = Boolean(me?.checkInAt);
+          const statusText = hadir
+            ? `Hadir pukul ${me?.checkInAt}`
+            : item.status === 'selesai'
+              ? 'Tidak hadir'
+              : 'Belum presensi';
+
+          return (
+            <ThemedView
+              type="backgroundElement"
+              style={[styles.card, { borderColor: theme.border }]}>
+              <ThemedText style={styles.title}>{item.courseName}</ThemedText>
+              <ThemedText>
+                {item.dateLabel} · {item.startTime}–{item.endTime}
               </ThemedText>
-            </View>
-            <ThemedText type="smallBold" style={{ color }}>
-              {label}
-            </ThemedText>
-          </ThemedView>
-        );
-      }}
-      ListEmptyComponent={
-        <EmptyState
-          title="Belum ada riwayat kehadiran"
-          hint="Riwayat muncul setelah sesi pertama dijadwalkan."
-        />
-      }
-    />
+              <ThemedText>{statusText}</ThemedText>
+              {leave ? (
+                <View style={styles.leaveInfo}>
+                  <LeaveStatusBadge status={leave.status} />
+                  <ThemedText>Alasan: {leave.reason}</ThemedText>
+                  {leave.decisionNote ? (
+                    <ThemedText>Catatan asisten: {leave.decisionNote}</ThemedText>
+                  ) : null}
+                  <AICard
+                    category={leave.aiCategory}
+                    confidence={leave.aiConfidence}
+                    model={leave.aiModel}
+                  />
+                </View>
+              ) : null}
+            </ThemedView>
+          );
+        }}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    width: '100%',
-    maxWidth: MaxContentWidth,
-    alignSelf: 'center',
-    padding: Spacing.three,
-    gap: Spacing.three,
-  },
-  header: {
-    gap: Spacing.three,
-  },
-  heading: {
-    gap: Spacing.one,
-  },
-  title: {
-    fontSize: 24,
-    lineHeight: 30,
-  },
-  statRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.two,
-  },
-  card: {
-    padding: Spacing.three,
-    borderRadius: Spacing.three,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.two,
-  },
-  info: {
-    flexShrink: 1,
-    gap: 2,
-  },
+  container: { flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center' },
+  summary: { padding: 16, margin: 16, marginBottom: 8, borderRadius: 16, borderWidth: 1, gap: 8 },
+  name: { fontSize: 16, fontWeight: '700' },
+  statsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  list: { padding: 16, paddingTop: 8, gap: 12 },
+  card: { padding: 14, borderRadius: 14, borderWidth: 1, gap: 6 },
+  title: { fontWeight: '700' },
+  leaveInfo: { gap: 8, marginTop: 4 },
 });
