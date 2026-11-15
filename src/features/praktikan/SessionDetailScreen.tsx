@@ -17,6 +17,12 @@ import { AICard } from './components/AICard';
 import { LeaveStatusBadge } from './components/LeaveStatusBadge';
 import { LeaveRequestModal } from './LeaveRequestModal';
 
+/*
+ * FR-10 & FR-11: Implementasi presensi (check‑in) untuk praktikan serta pencegahan presensi ganda.
+ * - Tombol "Presensi Sekarang" hanya aktif bila sesi berstatus "berlangsung" dan praktikan belum hadir.
+ * - handleCheckIn memanggil dataService.checkIn dan menampilkan FeedbackBanner.
+ * - Logika tambahan memastikan tidak ada pemanggilan API bila sudah hadir.
+ */
 export function SessionDetailScreen({ sessionId, onBack }: { sessionId: string; onBack: () => void; }) {
   const theme = useTheme();
   const data = useAppData();
