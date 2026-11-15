@@ -7,10 +7,10 @@ import { ThemedText } from './themed-text';
 
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import type { Participant, PracticumSession } from '@/types/session';
+import type { PracticumSession, SessionParticipant } from '@/types/domain';
 
 type ParticipantDetailModalProps = {
-  participant: Participant | null;
+  participant: SessionParticipant | null;
   session: PracticumSession;
   onClose: () => void;
 };

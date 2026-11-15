@@ -1,118 +1,44 @@
-import { StyleSheet, View } from 'react-native';
-
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import type { AIClassification } from '../types';
+import type { PermitCategory } from '@/types/domain';
+import { StyleSheet } from 'react-native';
+
+const LABEL: Record<PermitCategory, string> = {
+  sakit: 'Sakit',
+  'acara-kampus': 'Acara Kampus',
+  keluarga: 'Keluarga',
+  lainnya: 'Lainnya',
+  'belum-diklasifikasi': 'Belum diklasifikasi',
+};
 
 interface AICardProps {
-  ai: AIClassification;
+  category: PermitCategory;
+  confidence: number | null;
+  model?: string;
 }
 
-export function AICard({ ai }: AICardProps) {
+export function AICard({ category, confidence, model }: AICardProps) {
   const theme = useTheme();
-  const confidencePercent = Math.round(ai.confidence * 100);
-
-  const urgencyLabel =
-    ai.urgency === 'tinggi' ? 'Tinggi' : ai.urgency === 'sedang' ? 'Sedang' : 'Rendah';
+  const pct = confidence == null ? null : Math.round(confidence * 100);
 
   return (
-    <ThemedView
-      type="surfaceAlt"
-      style={[
-        styles.container,
-        {
-          borderColor: theme.border,
-        },
-      ]}>
-      {/* Header AI */}
-      <View style={styles.header}>
-        <ThemedView type="highlight" style={styles.badgeAi}>
-          <ThemedText type="smallBold" themeColor="link">
-            🤖 Analisis AI (Informasi Pendukung)
-          </ThemedText>
-        </ThemedView>
-        <ThemedText type="smallBold" themeColor="link">
-          {confidencePercent}% Cocok
-        </ThemedText>
-      </View>
-
-      {/* Baris Kategori Prediksi */}
-      <View style={styles.metaRow}>
-        <ThemedText type="small" themeColor="textSecondary">
-          Kategori Prediksi:
-        </ThemedText>
-        <ThemedText type="smallBold">{ai.predictedCategory}</ThemedText>
-      </View>
-
-      {/* Baris Urgensi */}
-      <View style={styles.metaRow}>
-        <ThemedText type="small" themeColor="textSecondary">
-          Tingkat Urgensi:
-        </ThemedText>
-        <ThemedText
-          type="smallBold"
-          themeColor={ai.urgency === 'tinggi' ? 'danger' : 'text'}>
-          {urgencyLabel}
-        </ThemedText>
-      </View>
-
-      {/* Ringkasan Analisa */}
-      <ThemedView type="highlight" style={styles.summaryBox}>
-        <ThemedText type="small" style={styles.summaryText}>
-          {ai.summary}
-        </ThemedText>
-      </ThemedView>
-
-      {/* Disclaimer Resmi */}
-      <View style={[styles.disclaimerBox, { borderTopColor: theme.border }]}>
-        <ThemedText type="code" themeColor="textSecondary" style={styles.disclaimerText}>
-          {ai.disclaimer}
-        </ThemedText>
-      </View>
+    <ThemedView type="backgroundElement" style={[styles.card, { borderColor: theme.border }]}>
+      <ThemedText style={styles.title}>Prediksi AI (informasi pendukung)</ThemedText>
+      <ThemedText>
+        Kategori: {LABEL[category]}
+        {pct != null ? ` · ${pct}%` : ''}
+      </ThemedText>
+      {model ? <ThemedText style={styles.small}>Model: {model}</ThemedText> : null}
+      <ThemedText style={styles.small}>
+        Hasil ini hanya prediksi. Keputusan izin ada pada asisten.
+      </ThemedText>
     </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    borderRadius: Spacing.two,
-    borderWidth: 1,
-    padding: Spacing.two + 4,
-    gap: Spacing.two,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  badgeAi: {
-    paddingVertical: Spacing.half,
-    paddingHorizontal: Spacing.one + 2,
-    borderRadius: 999,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: Spacing.two,
-  },
-  summaryBox: {
-    padding: Spacing.two,
-    borderRadius: Spacing.one + 2,
-  },
-  summaryText: {
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  disclaimerBox: {
-    borderTopWidth: 1,
-    paddingTop: Spacing.one,
-  },
-  disclaimerText: {
-    fontSize: 11,
-    lineHeight: 15,
-    fontStyle: 'italic',
-  },
+  card: { padding: 12, borderRadius: 12, borderWidth: 1, gap: 4 },
+  title: { fontWeight: '700' },
+  small: { fontSize: 12, opacity: 0.7 },
 });

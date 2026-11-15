@@ -2,7 +2,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Palette } from '@/constants/theme';
-import type { LeaveStatus } from '../types';
+import type { PermitStatus } from '@/types/domain';
 
 type LeaveBadgeMeta = {
   label: string;
@@ -10,7 +10,7 @@ type LeaveBadgeMeta = {
   backgroundColor: string;
 };
 
-const LEAVE_STATUS_META: Record<LeaveStatus, LeaveBadgeMeta> = {
+const LEAVE_STATUS_META: Record<PermitStatus, LeaveBadgeMeta> = {
   menunggu: {
     label: 'Menunggu Verifikasi',
     textColor: Palette.inkSoft,
@@ -28,7 +28,7 @@ const LEAVE_STATUS_META: Record<LeaveStatus, LeaveBadgeMeta> = {
   },
 };
 
-export function LeaveStatusBadge({ status }: { status: LeaveStatus }) {
+export function LeaveStatusBadge({ status }: { status: PermitStatus }) {
   const meta = LEAVE_STATUS_META[status] ?? LEAVE_STATUS_META.menunggu;
 
   return (

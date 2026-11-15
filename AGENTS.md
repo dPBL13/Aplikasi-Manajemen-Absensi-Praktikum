@@ -1,5 +1,19 @@
 This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
 
+## Start here — required reading before editing
+
+1. **[`AI_CONTEXT.md`](./AI_CONTEXT.md)** — canonical architecture, domain model, `DataService` contract, route map, FR ownership, recipes, gotchas. **Read this first.**
+2. **[`UI_STYLE_GUIDE.md`](./UI_STYLE_GUIDE.md)** — palette and UI component rules.
+
+If you add/rename a route, change `src/types/domain.ts`, add a `DataService` method, or introduce a shared component, update `AI_CONTEXT.md` in the same change.
+
+## Data layer rules
+
+- Screens read via `useAppData()` and write via `dataService` from `src/services/index.ts`. Never import `src/services/mock/*` or `src/data/seed.ts` from a screen.
+- Business rules (status transitions, duplicate check-in, cascades, validation) live in the data layer, not in components.
+- Mutations are async and return `{ ok: true } | { ok: false, reason }`; show `FeedbackBanner` for both outcomes.
+- `src/data/current-user.ts` is the single place for mocked identity until Firebase Auth lands.
+
 ## Expo has changed — do not trust your training data
 
 Expo ships breaking changes every SDK release. APIs you remember are likely renamed, moved, or removed. Before writing any code that touches an Expo, EAS, or React Native API:
@@ -15,8 +29,8 @@ Use `bunx` instead of `npx` if the project uses bun (`bun.lock` present).
 ```bash
 npx expo install <package>  # ALWAYS use instead of npm/yarn/pnpm/bun add — resolves SDK-compatible versions
 npx expo start              # start the dev server
-npx expo lint               # lint
-npx tsc --noEmit            # typecheck
+npx expo lint               # lint (npm run lint)
+npx tsc --noEmit            # typecheck (npm run typecheck)
 npx expo-doctor             # diagnose dependency and config issues
 npx expo install --fix      # fix incompatible package versions
 ```

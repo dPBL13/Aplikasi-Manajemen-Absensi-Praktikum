@@ -1,8 +1,7 @@
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   Pressable,
-  ScrollView,
   StyleSheet,
   TextInput,
   useWindowDimensions,
@@ -14,18 +13,22 @@ import { BottomSheetModal } from '@/components/bottom-sheet-modal';
 import { FeedbackBanner, type FeedbackMessage } from '@/components/feedback-banner';
 import { InfoRow } from '@/components/info-row';
 import { ParticipantDetailModal } from '@/components/participant-detail-modal';
-import { AttendanceBadge, SessionStatusBadge } from '@/components/status-badge';
+import { ScreenScroll } from '@/components/screen-scroll';
+import { AttendanceBadge, PermitStatusBadge, SessionStatusBadge } from '@/components/status-badge';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { MaxContentWidth, Spacing } from '@/constants/theme';
-import { useSessions } from '@/context/session-context';
+import { Spacing } from '@/constants/theme';
+import { SessionForm } from '@/features/asprak/session-form';
 import { useTheme } from '@/hooks/use-theme';
+import { dataService, useAppData } from '@/services';
+import { findSession, permitsForSession, summarizeAttendance } from '@/services/selectors';
 
-type PendingAction = 'open' | 'close';
+type PendingAction = 'open' | 'close' | 'delete';
 
-export default function SessionDetailScreen() {
+/** FR-08 — detail sesi, buka/tutup, ubah informasi, hapus. */
+export default function AsprakSessionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { getSession, openSession, closeSession } = useSessions();
+  const data = useAppData();
   const theme = useTheme();
   const { width } = useWindowDimensions();
 
@@ -33,10 +36,10 @@ export default function SessionDetailScreen() {
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [closeNote, setCloseNote] = useState('');
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
 
-  const session = getSession(id);
+  const session = findSession(data, id);
   const isWide = width >= 960;
-  const contentPadding = width >= 768 ? Spacing.five : Spacing.four;
 
   useEffect(() => {
     if (!feedback) {
@@ -50,82 +53,86 @@ export default function SessionDetailScreen() {
 
   if (!session) {
     return (
-      <ThemedView style={styles.container}>
-        <View style={[styles.content, { padding: contentPadding }]}>
-          <ThemedView type="backgroundElement" style={styles.card}>
-            <ThemedText type="subtitle">Sesi tidak ditemukan</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              Sesi praktikum yang Anda cari tidak tersedia.
-            </ThemedText>
-          </ThemedView>
-        </View>
-      </ThemedView>
+      <ScreenScroll>
+        <ThemedView type="backgroundElement" style={styles.card}>
+          <ThemedText type="subtitle">Sesi tidak ditemukan</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            Sesi praktikum yang Anda cari tidak tersedia atau sudah dihapus.
+          </ThemedText>
+          <ActionButton label="Kembali ke jadwal" tone="secondary" onPress={() => router.back()} />
+        </ThemedView>
+      </ScreenScroll>
     );
   }
 
-  const attendedParticipants = session.participants.filter((participant) => participant.checkInAt);
-  const absentCount = session.participants.length - attendedParticipants.length;
+  const summary = summarizeAttendance(session);
+  const permits = permitsForSession(data, session.id);
+  const pendingPermits = permits.filter((permit) => permit.status === 'menunggu');
   const selectedParticipant =
     session.participants.find((participant) => participant.id === selectedParticipantId) ?? null;
-  const isClosing = pendingAction === 'close';
 
-  const closeActionModal = () => {
+  const closeModal = () => {
     setPendingAction(null);
     setCloseNote('');
   };
 
-  const requestOpenSession = () => {
-    setPendingAction('open');
-    setCloseNote('');
-  };
-
-  const requestCloseSession = () => {
-    setPendingAction('close');
-    setCloseNote('');
-  };
-
-  const confirmAction = () => {
-    if (pendingAction === 'open') {
-      setFeedback(
-        openSession(session.id)
-          ? {
-              tone: 'success',
-              message: 'Sesi berhasil dibuka. Praktikan sekarang dapat melakukan presensi.',
-            }
-          : {
-              tone: 'error',
-              message: 'Sesi tidak dapat dibuka pada status saat ini.',
-            },
-      );
+  const confirmAction = async () => {
+    if (!pendingAction) {
+      return;
     }
 
-    if (pendingAction === 'close') {
-      setFeedback(
-        closeSession(session.id, closeNote)
-          ? {
-              tone: 'success',
-              message: 'Sesi berhasil ditutup. Presensi baru tidak dapat dilakukan.',
-            }
-          : {
-              tone: 'error',
-              message: 'Sesi tidak dapat ditutup pada status saat ini.',
-            },
-      );
+    if (pendingAction === 'delete') {
+      const result = await dataService.deleteSession(session.id);
+      closeModal();
+
+      if (!result.ok) {
+        setFeedback({ tone: 'error', message: result.reason });
+        return;
+      }
+
+      router.back();
+      return;
     }
 
-    closeActionModal();
+    const result =
+      pendingAction === 'open'
+        ? await dataService.openSession(session.id)
+        : await dataService.closeSession(session.id, closeNote);
+
+    closeModal();
+
+    setFeedback(
+      result.ok
+        ? {
+            tone: 'success',
+            message:
+              pendingAction === 'open'
+                ? 'Sesi berhasil dibuka. Praktikan sekarang dapat melakukan presensi.'
+                : 'Sesi berhasil ditutup. Presensi baru tidak dapat dilakukan.',
+          }
+        : { tone: 'error', message: result.reason },
+    );
   };
+
+  const modalTitle =
+    pendingAction === 'delete'
+      ? 'Hapus sesi praktikum?'
+      : pendingAction === 'close'
+        ? 'Tutup sesi praktikum?'
+        : 'Buka sesi praktikum?';
+
+  const modalDescription =
+    pendingAction === 'delete'
+      ? 'Sesi, data kehadiran, dan pengajuan izin terkait akan dihapus permanen.'
+      : pendingAction === 'close'
+        ? 'Setelah sesi ditutup, praktikan tidak dapat melakukan presensi baru.'
+        : 'Praktikan hanya dapat melakukan presensi ketika sesi berlangsung.';
 
   return (
     <>
       <Stack.Screen options={{ title: session.courseName }} />
 
-      <ScrollView
-        style={[styles.container, { backgroundColor: theme.background }]}
-        contentContainerStyle={[
-          styles.content,
-          { padding: contentPadding, paddingBottom: Spacing.six },
-        ]}>
+      <ScreenScroll>
         <ThemedView type="backgroundElement" style={styles.card}>
           <View style={styles.titleRow}>
             <ThemedText type="default" style={styles.titleText}>
@@ -153,57 +160,135 @@ export default function SessionDetailScreen() {
           ) : null}
         </ThemedView>
 
-        {feedback ? (
-          <FeedbackBanner {...feedback} onDismiss={() => setFeedback(null)} />
-        ) : null}
+        {feedback ? <FeedbackBanner {...feedback} onDismiss={() => setFeedback(null)} /> : null}
 
         <ThemedView type="backgroundElement" style={styles.card}>
           <ThemedText type="default" style={styles.sectionTitle}>
             Aksi Sesi
           </ThemedText>
 
-          {session.status === 'belum-dibuka' ? (
+          {isEditing ? (
+            <SessionForm
+              classes={data.classes}
+              initial={{
+                classId: session.classId,
+                dayLabel: session.dayLabel,
+                dateLabel: session.dateLabel,
+                startTime: session.startTime,
+                endTime: session.endTime,
+                room: session.room,
+              }}
+              submitLabel="Simpan perubahan"
+              onSubmit={(input) => dataService.updateSession(session.id, input)}
+              onSuccess={() => {
+                setIsEditing(false);
+                setFeedback({ tone: 'success', message: 'Informasi sesi berhasil diperbarui.' });
+              }}
+              onCancel={() => setIsEditing(false)}
+            />
+          ) : (
             <>
-              <ThemedText type="small" themeColor="textSecondary">
-                Buka sesi agar praktikan dapat melakukan presensi.
-              </ThemedText>
-              <ActionButton label="Buka Sesi" onPress={requestOpenSession} />
-            </>
-          ) : null}
+              {session.status === 'belum-dibuka' ? (
+                <>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    Buka sesi agar praktikan dapat melakukan presensi.
+                  </ThemedText>
+                  <ActionButton label="Buka Sesi" onPress={() => setPendingAction('open')} />
+                </>
+              ) : null}
 
-          {session.status === 'berlangsung' ? (
-            <>
-              <ThemedText type="small" themeColor="textSecondary">
-                Sesi sedang berlangsung. Tutup sesi setelah praktikum selesai.
-              </ThemedText>
-              <ActionButton label="Tutup Sesi" tone="danger" onPress={requestCloseSession} />
-            </>
-          ) : null}
+              {session.status === 'berlangsung' ? (
+                <>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    Sesi sedang berlangsung. Tutup sesi setelah praktikum selesai.
+                  </ThemedText>
+                  <ActionButton
+                    label="Tutup Sesi"
+                    tone="danger"
+                    onPress={() => setPendingAction('close')}
+                  />
+                </>
+              ) : null}
 
-          {session.status === 'selesai' ? (
-            <ThemedText type="small" themeColor="textSecondary">
-              Sesi telah ditutup{session.closedAt ? ` pukul ${session.closedAt}` : ''}. Presensi baru
-              tidak dapat dilakukan.
-            </ThemedText>
-          ) : null}
+              {session.status === 'selesai' ? (
+                <ThemedText type="small" themeColor="textSecondary">
+                  Sesi telah ditutup{session.closedAt ? ` pukul ${session.closedAt}` : ''}. Presensi
+                  baru tidak dapat dilakukan.
+                </ThemedText>
+              ) : null}
+
+              <ActionButton
+                label="Ubah Informasi Sesi"
+                tone="secondary"
+                onPress={() => setIsEditing(true)}
+              />
+              <ActionButton
+                label="Hapus Sesi"
+                tone="danger"
+                onPress={() => setPendingAction('delete')}
+              />
+            </>
+          )}
         </ThemedView>
 
+        {permits.length > 0 ? (
+          <ThemedView type="backgroundElement" style={styles.card}>
+            <View style={styles.titleRow}>
+              <ThemedText type="default" style={styles.sectionTitle}>
+                Pengajuan Izin
+              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                {pendingPermits.length} menunggu
+              </ThemedText>
+            </View>
+
+            {permits.map((permit, index) => (
+              <Pressable
+                key={permit.id}
+                accessibilityRole="button"
+                accessibilityLabel={`Lihat pengajuan izin ${permit.participantName}`}
+                onPress={() =>
+                  router.push({ pathname: '/asprak/izin/[id]', params: { id: permit.id } })
+                }
+                style={({ pressed }) => [
+                  styles.permitRow,
+                  index < permits.length - 1 && {
+                    borderBottomWidth: StyleSheet.hairlineWidth,
+                    borderBottomColor: theme.border,
+                  },
+                  pressed && styles.pressed,
+                ]}>
+                <View style={styles.participantInfo}>
+                  <ThemedText type="small">{permit.participantName}</ThemedText>
+                  <ThemedText type="code" themeColor="textSecondary">
+                    {permit.nim}
+                  </ThemedText>
+                </View>
+                <PermitStatusBadge status={permit.status} />
+              </Pressable>
+            ))}
+
+            <ThemedText type="small" themeColor="textSecondary">
+              Ketuk untuk membuka detail dan memutuskan pengajuan.
+            </ThemedText>
+          </ThemedView>
+        ) : null}
+
         <View style={[styles.split, isWide && styles.splitWide]}>
-          <ThemedView
-            type="backgroundElement"
-            style={[styles.card, isWide && styles.cardSplit]}>
+          <ThemedView type="backgroundElement" style={[styles.card, isWide && styles.cardSplit]}>
             <View style={styles.titleRow}>
               <ThemedText type="default" style={styles.sectionTitle}>
                 Pemantauan Kehadiran
               </ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
-                {attendedParticipants.length}/{session.participants.length} hadir
+                {summary.attended}/{summary.total} hadir
               </ThemedText>
             </View>
 
             {session.participants.length === 0 ? (
               <ThemedText type="small" themeColor="textSecondary">
-                Belum ada praktikan yang terdaftar pada sesi ini.
+                Belum ada praktikan yang terdaftar pada sesi ini. Tambahkan peserta melalui detail
+                kelas.
               </ThemedText>
             ) : (
               <>
@@ -244,69 +329,62 @@ export default function SessionDetailScreen() {
             )}
           </ThemedView>
 
-          <ThemedView
-            type="backgroundElement"
-            style={[styles.card, isWide && styles.cardSplit]}>
+          <ThemedView type="backgroundElement" style={[styles.card, isWide && styles.cardSplit]}>
             <ThemedText type="default" style={styles.sectionTitle}>
               Rekap Presensi
             </ThemedText>
 
-            {attendedParticipants.length === 0 ? (
+            <ThemedText type="small" themeColor="textSecondary">
+              {summary.attended} dari {summary.total} praktikan telah melakukan presensi
+              {summary.total > 0 ? ` (${summary.rate}%)` : ''}.
+            </ThemedText>
+
+            {summary.attended === 0 ? (
               <ThemedText type="small" themeColor="textSecondary">
-                Belum ada presensi tercatat.
+                Belum ada presensi tercatat pada sesi ini.
               </ThemedText>
             ) : (
               <>
-                <ThemedText type="small" themeColor="textSecondary">
-                  {attendedParticipants.length} dari {session.participants.length} praktikan telah
-                  melakukan presensi.
-                </ThemedText>
-
-                {attendedParticipants.map((participant) => (
-                  <View key={participant.id} style={styles.recapRow}>
-                    <View style={styles.participantInfo}>
-                      <ThemedText type="small">{participant.name}</ThemedText>
+                {session.participants
+                  .filter((participant) => participant.checkInAt)
+                  .map((participant) => (
+                    <View key={participant.id} style={styles.recapRow}>
+                      <View style={styles.participantInfo}>
+                        <ThemedText type="small">{participant.name}</ThemedText>
+                        <ThemedText type="code" themeColor="textSecondary">
+                          {participant.nim}
+                        </ThemedText>
+                      </View>
                       <ThemedText type="code" themeColor="textSecondary">
-                        {participant.nim}
+                        {participant.checkInAt}
                       </ThemedText>
                     </View>
-                    <ThemedText type="code" themeColor="textSecondary">
-                      {participant.checkInAt}
-                    </ThemedText>
-                  </View>
-                ))}
+                  ))}
 
-                {absentCount > 0 ? (
+                {summary.absent > 0 ? (
                   <ThemedText type="small" themeColor="textSecondary">
-                    {absentCount} praktikan belum melakukan presensi.
+                    {summary.absent} praktikan belum melakukan presensi.
                   </ThemedText>
                 ) : null}
               </>
             )}
           </ThemedView>
         </View>
-      </ScrollView>
+      </ScreenScroll>
 
       <BottomSheetModal
         visible={pendingAction !== null}
-        title={isClosing ? 'Tutup sesi praktikum?' : 'Buka sesi praktikum?'}
-        description={
-          isClosing
-            ? 'Setelah sesi ditutup, praktikan tidak dapat melakukan presensi baru.'
-            : 'Praktikan hanya dapat melakukan presensi ketika sesi berlangsung.'
-        }
-        onClose={closeActionModal}>
+        title={modalTitle}
+        description={modalDescription}
+        onClose={closeModal}>
         <View style={styles.modalSummary}>
           <InfoRow label="Praktikum" value={session.courseName} />
           <InfoRow label="Kelas" value={session.classGroup} />
           <InfoRow label="Waktu" value={`${session.startTime} – ${session.endTime}`} />
-          <InfoRow
-            label="Kehadiran"
-            value={`${attendedParticipants.length}/${session.participants.length} praktikan`}
-          />
+          <InfoRow label="Kehadiran" value={`${summary.attended}/${summary.total} praktikan`} />
         </View>
 
-        {isClosing ? (
+        {pendingAction === 'close' ? (
           <View style={styles.field}>
             <ThemedText type="smallBold">Catatan sesi (opsional)</ThemedText>
             <TextInput
@@ -336,15 +414,16 @@ export default function SessionDetailScreen() {
         ) : null}
 
         <View style={styles.modalActions}>
+          <ActionButton label="Batal" tone="secondary" onPress={closeModal} style={styles.modalButton} />
           <ActionButton
-            label="Batal"
-            tone="secondary"
-            onPress={closeActionModal}
-            style={styles.modalButton}
-          />
-          <ActionButton
-            label={isClosing ? 'Tutup Sesi' : 'Buka Sesi'}
-            tone={isClosing ? 'danger' : 'primary'}
+            label={
+              pendingAction === 'delete'
+                ? 'Hapus Sesi'
+                : pendingAction === 'close'
+                  ? 'Tutup Sesi'
+                  : 'Buka Sesi'
+            }
+            tone={pendingAction === 'open' ? 'primary' : 'danger'}
             onPress={confirmAction}
             style={styles.modalButton}
           />
@@ -361,20 +440,8 @@ export default function SessionDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    width: '100%',
-    maxWidth: MaxContentWidth,
-    alignSelf: 'center',
-    paddingBottom: Spacing.six,
-    gap: Spacing.three,
-  },
   card: {
     width: '100%',
-    maxWidth: MaxContentWidth,
-    alignSelf: 'center',
     padding: Spacing.three,
     borderRadius: Spacing.three,
     gap: Spacing.two,
@@ -412,6 +479,13 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
   },
   participantRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.two,
+    paddingVertical: Spacing.two,
+  },
+  permitRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
