@@ -1,3 +1,9 @@
+/*
+ * FR-16: Formulir pengajuan izin praktikan.
+ * - Tidak ada kolom "Catatan / Bukti Tambahan".
+ * - Hanya mengirim alasan, sessionId, participantId.
+ * - participantName dan nim dibiarkan string kosong.
+ */
 import { useState } from 'react';
 import {
   KeyboardAvoidingView,
