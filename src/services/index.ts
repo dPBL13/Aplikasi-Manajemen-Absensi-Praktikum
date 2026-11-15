@@ -1,17 +1,18 @@
 import { useSyncExternalStore } from 'react';
 
+import { firestoreDataService } from './firestore-service';
 import { mockDataService } from './mock';
 import type { DataService } from './types';
 
 /**
  * TITIK GANTI BACKEND — satu-satunya tempat implementasi data dipilih.
  *
- * Sekarang: mock (in-memory, realtime via subscribe).
- * Nanti   : `export const dataService = firestoreDataService;`
- *           Adapter baru cukup mengimplementasikan `DataService`
- *           (lihat src/services/types.ts dan panduan di AI_CONTEXT.md).
+ * Menggunakan firestoreDataService untuk Cloud Firestore real-time & integrasi Gemini AI.
  */
-export const dataService: DataService = mockDataService;
+export const dataService: DataService = firestoreDataService;
+export { mockDataService, firestoreDataService };
+
+
 
 /**
  * Berlangganan seluruh state aplikasi. Setiap mutasi memicu re-render,

@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "719260391853",
+    "project_id": "amap-ppk",
+    "storage_bucket": "amap-ppk.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:719260391853:android:e71dab7924a50d5a156924",
+        "android_client_info": {
+          "package_name": "com.dpbl13.amapppk"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "719260391853-999p9pavu9639qtf85ngf273dh22t2sk.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBI5EhUXFQixKnYFB5FnFd9GRwznabvu10"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "719260391853-999p9pavu9639qtf85ngf273dh22t2sk.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

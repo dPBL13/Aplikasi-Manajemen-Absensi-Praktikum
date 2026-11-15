@@ -1,36 +1,103 @@
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { ActionButton } from '@/components/action-button';
 import { ScreenScroll } from '@/components/screen-scroll';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
+import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { useAppData } from '@/services';
 import { asprakOverview } from '@/services/selectors';
 
 /**
- * Pemilih peran (FR-25 sementara). Setelah autentikasi Firebase selesai,
- * layar ini diganti redirect berdasarkan role pengguna.
+ * Pemilih peran & status autentikasi (FR-01 s/d FR-04, FR-25).
  */
 export default function RolePickerScreen() {
   const data = useAppData();
   const theme = useTheme();
+  const { user, userProfile, role, logout } = useAuth();
   const overview = asprakOverview(data);
 
   return (
     <ScreenScroll>
+      {/* Kartu Status Autentikasi Pengguna */}
+      {user ? (
+        <ThemedView
+          type="backgroundElement"
+          style={[styles.authCard, { borderColor: theme.accent }]}
+        >
+          <View style={styles.authInfo}>
+            <ThemedText type="smallBold" style={{ color: theme.accent }}>
+              Akun Aktif: {role === 'asprak' ? 'Asisten Praktikum' : 'Praktikan'}
+            </ThemedText>
+            <ThemedText type="subtitle">
+              {userProfile?.name || user.displayName || 'Pengguna'}
+            </ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              {userProfile?.nim ? `NIM: ${userProfile.nim} · ` : ''}
+              {user.email}
+            </ThemedText>
+          </View>
+
+          <View style={styles.authActions}>
+            <ActionButton
+              label={
+                role === 'asprak'
+                  ? 'Buka Dashboard Asisten'
+                  : 'Buka Dashboard Praktikan'
+              }
+              tone="primary"
+              onPress={() =>
+                router.replace(role === 'asprak' ? '/asprak' : '/praktikan')
+              }
+            />
+            <ActionButton
+              label="Keluar Akun"
+              tone="secondary"
+              onPress={async () => {
+                await logout();
+              }}
+            />
+          </View>
+        </ThemedView>
+      ) : (
+        <ThemedView
+          type="backgroundElement"
+          style={[styles.authCard, { borderColor: theme.border }]}
+        >
+          <View style={styles.authInfo}>
+            <ThemedText type="subtitle">Autentikasi Pengguna</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              Masuk dengan akun praktikum Anda untuk sinkronisasi otomatis via Cloud Firestore.
+            </ThemedText>
+          </View>
+          <View style={styles.authActions}>
+            <ActionButton
+              label="Masuk ke Akun"
+              tone="primary"
+              onPress={() => router.push('/(auth)/login')}
+            />
+            <ActionButton
+              label="Daftar Akun Baru"
+              tone="secondary"
+              onPress={() => router.push('/(auth)/register')}
+            />
+          </View>
+        </ThemedView>
+      )}
+
       <View style={styles.heading}>
-        <ThemedText type="subtitle">Pilih perspektif</ThemedText>
+        <ThemedText type="subtitle">Mode Demo & Akses Langsung</ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
-          Mode demo memakai data mock yang sama untuk kedua peran. Perubahan di satu sisi langsung
-          terlihat di sisi lain.
+          Pilih perspektif di bawah untuk mengakses modul secara langsung:
         </ThemedText>
       </View>
 
       <RoleCard
-        title="Asisten Praktikum"
-        description="Kelola kelas, jadwal, kehadiran, rekap, dan pengajuan izin."
+        title="Asisten Praktikum (Asprak)"
+        description="Kelola kelas, jadwal, kehadiran, rekap presensi, dan tinjau izin dengan AI."
         meta={`${overview.classCount} kelas · ${overview.sessionCount} sesi · ${overview.pendingPermitCount} izin menunggu`}
         actionLabel="Masuk sebagai Asisten"
         onPress={() => router.replace('/asprak')}
@@ -38,17 +105,16 @@ export default function RolePickerScreen() {
 
       <RoleCard
         title="Praktikan"
-        description="Lihat jadwal, lakukan presensi, dan periksa riwayat kehadiran."
-        meta="Presensi hanya aktif ketika sesi sedang berlangsung"
+        description="Lihat jadwal praktikum, lakukan presensi real-time, dan ajukan izin."
+        meta="Presensi real-time & sinkronisasi instan via Cloud Firestore"
         actionLabel="Masuk sebagai Praktikan"
         onPress={() => router.replace('/praktikan')}
       />
 
       <ThemedView style={[styles.note, { borderColor: theme.border }]}>
-        <ThemedText type="smallBold">Catatan integrasi</ThemedText>
+        <ThemedText type="smallBold">Integrasi Backend Firebase & Gemini AI</ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
-          Data layer ada di src/services. Saat backend Firestore siap, cukup ganti satu baris di
-          src/services/index.ts.
+          Modul Backend terhubung ke Cloud Firestore dan Google Gemini AI untuk klasifikasi alasan izin otomatis.
         </ThemedText>
       </ThemedView>
     </ScreenScroll>
@@ -75,7 +141,8 @@ function RoleCard({ title, description, meta, actionLabel, onPress }: RoleCardPr
         styles.card,
         { backgroundColor: theme.backgroundElement, borderColor: theme.border },
         pressed && styles.pressed,
-      ]}>
+      ]}
+    >
       <ThemedText type="default" style={styles.cardTitle}>
         {title}
       </ThemedText>
@@ -93,8 +160,21 @@ function RoleCard({ title, description, meta, actionLabel, onPress }: RoleCardPr
 }
 
 const styles = StyleSheet.create({
+  authCard: {
+    padding: Spacing.three,
+    borderRadius: Spacing.three,
+    borderWidth: 1.5,
+    gap: Spacing.three,
+  },
+  authInfo: {
+    gap: Spacing.one,
+  },
+  authActions: {
+    gap: Spacing.two,
+  },
   heading: {
     gap: Spacing.one,
+    marginTop: Spacing.two,
   },
   card: {
     padding: Spacing.three,
@@ -103,7 +183,7 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   cardTitle: {
-    fontWeight: 700,
+    fontWeight: '700',
   },
   note: {
     padding: Spacing.three,

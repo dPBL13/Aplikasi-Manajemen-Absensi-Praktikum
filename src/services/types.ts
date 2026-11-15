@@ -44,6 +44,14 @@ export interface PermitDecisionInput {
   decidedBy: string;
 }
 
+export interface SubmitPermitInput {
+  sessionId: string;
+  reason: string;
+  participantId?: string;
+  participantName?: string;
+  nim?: string;
+}
+
 export interface DataService {
   /**
    * Snapshot state saat ini. Harus stabil (objek sama) sampai ada mutasi,
@@ -72,9 +80,13 @@ export interface DataService {
   // FR-10 / FR-11 — presensi praktikan
   checkIn(sessionId: string, participantId: string): Promise<MutationResult>;
 
+  // FR-16 s/d FR-18 — pengajuan izin praktikan & klasifikasi AI
+  submitPermit?(input: SubmitPermitInput): Promise<MutationResult & { permit?: import('@/types/domain').Permit }>;
+
   // FR-20 — keputusan izin
   decidePermit(id: string, decision: PermitDecisionInput): Promise<MutationResult>;
 }
+
 
 /** Helper untuk layar: kelas + jumlah peserta tanpa perlu mengurangi manual. */
 export function countParticipants(practicumClass: PracticumClass): number {

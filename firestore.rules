@@ -1,0 +1,51 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Fungsi pembantu untuk memeriksa autentikasi
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Fungsi pembantu untuk mengambil data user
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Fungsi pembantu untuk memeriksa apakah pengguna adalah Asprak
+    function isAsprak() {
+      return isAuthenticated() && getUserData().role == 'asprak';
+    }
+
+    // Koleksi Profil Pengguna
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isAuthenticated() && (request.auth.uid == userId || isAsprak());
+      allow delete: if isAsprak();
+    }
+
+    // Koleksi Kelas Praktikum (FR-05)
+    match /classes/{classId} {
+      allow read: if true; // Praktikan dan Asprak dapat melihat kelas
+      allow write: if isAsprak() || isAuthenticated();
+    }
+
+    // Koleksi Sesi Praktikum (FR-07, FR-08, FR-10)
+    match /sessions/{sessionId} {
+      allow read: if true;
+      allow create, delete: if isAsprak() || isAuthenticated();
+      // Asprak dapat mengubah status sesi, Praktikan dapat mencatat checkInAt
+      allow update: if isAuthenticated();
+    }
+
+    // Koleksi Pengajuan Izin (FR-16 s/d FR-20)
+    match /permits/{permitId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      // Asprak dapat mengubah status keputusan izin
+      allow update: if isAsprak() || isAuthenticated();
+      allow delete: if isAsprak();
+    }
+  }
+}
