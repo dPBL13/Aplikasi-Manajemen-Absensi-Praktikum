@@ -41,6 +41,7 @@ export default function PraktikanTabsLayout() {
       }}>
       <Tabs.Screen name="index" options={{ title: 'Sesi' }} />
       <Tabs.Screen name="riwayat" options={{ title: 'Riwayat' }} />
+      <Tabs.Screen name="testAi" options={{ title: 'Test AI' }} />
     </Tabs>
   );
 }

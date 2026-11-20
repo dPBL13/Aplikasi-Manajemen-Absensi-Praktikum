@@ -27,7 +27,7 @@ export function ActionButton({
   const textColor = isSecondary
     ? theme.text
     : tone === 'danger'
-      ? '#ffffff'
+      ? Palette.background
       : theme.accentText;
 
   return (

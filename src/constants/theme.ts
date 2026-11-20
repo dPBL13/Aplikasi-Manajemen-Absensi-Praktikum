@@ -17,15 +17,15 @@ import { Platform } from 'react-native';
  */
 export const Palette = {
   background: '#87A878',
-  surface: '#C7CCB9',
-  button: '#B0BC98',
-  mint: '#CAE2BC',
-  lime: '#DBF9B8',
-  ink: '#1F2A1B',
-  inkSoft: '#3D4B34',
-  border: '#6F8A5E',
-  link: '#235C3A',
-  danger: '#8F2D22',
+  surface: '#B8C1A5',
+  button: '#A0B68C',
+  mint: '#C2DDAB',
+  lime: '#D1E8A5',
+  ink: '#1A2420',
+  inkSoft: '#394733',
+  border: '#6A8455',
+  link: '#2A6A44',
+  danger: '#C54737',
   dangerSurface: '#F7DAD3',
 } as const;
 
@@ -61,7 +61,7 @@ export const Colors = {
     accent: Palette.button,
     accentText: Palette.ink,
     success: Palette.lime,
-    successBackground: '#33502A',
+    successBackground: '#3A6B37',
     danger: '#FFB4AB',
     dangerBackground: '#4B1D1A',
     overlay: 'rgba(0, 0, 0, 0.65)',
