@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "main": "expo-router/entry",
   "dependencies": {
+    "@expo-google-fonts/commissioner": "^0.4.1",
+    "@expo-google-fonts/red-hat-display": "^0.4.1",
+    "@expo-google-fonts/spline-sans-mono": "^0.4.2",
     "@expo/ui": "~58.0.28",
     "@google/genai": "^3.3.0",
     "@react-native-firebase/app": "^27.1.1",
@@ -12,6 +15,7 @@
     "@typescript-eslint/parser": "^8.73.0",
     "eslint-plugin-import": "^2.32.0",
     "expo": "~58.0.25",
+    "expo-build-properties": "~58.0.12",
     "expo-constants": "~58.0.12",
     "expo-dev-client": "~58.0.20",
     "expo-device": "~58.0.5",

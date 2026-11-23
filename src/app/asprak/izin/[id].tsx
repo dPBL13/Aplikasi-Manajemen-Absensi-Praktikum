@@ -4,13 +4,13 @@ import { StyleSheet, TextInput, View } from 'react-native';
 
 import { ActionButton } from '@/components/action-button';
 import { BottomSheetModal } from '@/components/bottom-sheet-modal';
+import { Card } from '@/components/card';
 import { FeedbackBanner, type FeedbackMessage } from '@/components/feedback-banner';
 import { InfoRow } from '@/components/info-row';
 import { ScreenScroll } from '@/components/screen-scroll';
 import { PermitCategoryBadge, PermitStatusBadge } from '@/components/status-badge';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { Radius, Spacing, Typography } from '@/constants/theme';
 import { CURRENT_ASPRAK_NAME } from '@/data/current-user';
 import { useTheme } from '@/hooks/use-theme';
 import { dataService, useAppData } from '@/services';
@@ -46,13 +46,15 @@ export default function PermitDetailScreen() {
   if (!permit) {
     return (
       <ScreenScroll>
-        <ThemedView type="backgroundElement" style={styles.card}>
-          <ThemedText type="subtitle">Pengajuan tidak ditemukan</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
+        <Card>
+          <ThemedText type="headlineMd" themeColor="onSurface">
+            Pengajuan tidak ditemukan
+          </ThemedText>
+          <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
             Pengajuan izin sudah dihapus atau tidak tersedia.
           </ThemedText>
           <ActionButton label="Kembali" tone="secondary" onPress={() => router.back()} />
-        </ThemedView>
+        </Card>
       </ScreenScroll>
     );
   }
@@ -93,9 +95,9 @@ export default function PermitDetailScreen() {
       <Stack.Screen options={{ title: 'Detail Pengajuan Izin' }} />
 
       <ScreenScroll>
-        <ThemedView type="backgroundElement" style={styles.card}>
+        <Card>
           <View style={styles.titleRow}>
-            <ThemedText type="default" style={styles.titleText}>
+            <ThemedText type="headlineMd" themeColor="onSurface" style={styles.titleText}>
               {permit.participantName}
             </ThemedText>
             <PermitStatusBadge status={permit.status} />
@@ -110,29 +112,31 @@ export default function PermitDetailScreen() {
               value={`${session.dayLabel}, ${session.dateLabel} · ${session.startTime}–${session.endTime}`}
             />
           ) : null}
-        </ThemedView>
+        </Card>
 
         {feedback ? <FeedbackBanner {...feedback} onDismiss={() => setFeedback(null)} /> : null}
 
-        <ThemedView type="backgroundElement" style={styles.card}>
-          <ThemedText type="default" style={styles.sectionTitle}>
+        <Card>
+          <ThemedText type="titleMd" themeColor="onSurface">
             Alasan Ketidakhadiran
           </ThemedText>
-          <ThemedView type="highlight" style={styles.reasonBox}>
-            <ThemedText type="small">“{permit.reason}”</ThemedText>
-          </ThemedView>
-        </ThemedView>
+          <View style={[styles.reasonBox, { backgroundColor: theme.surfaceAlt }]}>
+            <ThemedText type="bodyMd" themeColor="onSurface">
+              “{permit.reason}”
+            </ThemedText>
+          </View>
+        </Card>
 
-        <ThemedView type="backgroundElement" style={styles.card}>
+        <Card>
           <View style={styles.titleRow}>
-            <ThemedText type="default" style={styles.sectionTitle}>
+            <ThemedText type="titleMd" themeColor="onSurface">
               Klasifikasi AI
             </ThemedText>
             <PermitCategoryBadge category={permit.aiCategory} />
           </View>
 
           {permit.aiCategory === 'belum-diklasifikasi' ? (
-            <ThemedText type="small" themeColor="textSecondary">
+            <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
               Alasan belum diklasifikasi. Hasil akan muncul setelah API AI (FR-17/FR-18) merespons.
             </ThemedText>
           ) : (
@@ -140,29 +144,29 @@ export default function PermitDetailScreen() {
               <InfoRow
                 label="Kategori"
                 value={permit.aiCategory.replace('-', ' ')}
-                valueType="small"
+                valueType="bodySm"
               />
               <InfoRow
                 label="Keyakinan model"
                 value={confidence === null ? '-' : `${confidence}%`}
               />
               {permit.aiModel ? <InfoRow label="Model" value={permit.aiModel} /> : null}
-              <ThemedText type="small" themeColor="textSecondary">
+              <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
                 Hasil klasifikasi bersifat bantuan. Keputusan akhir tetap berada pada asisten
                 praktikum.
               </ThemedText>
             </>
           )}
-        </ThemedView>
+        </Card>
 
-        <ThemedView type="backgroundElement" style={styles.card}>
-          <ThemedText type="default" style={styles.sectionTitle}>
+        <Card>
+          <ThemedText type="titleMd" themeColor="onSurface">
             Keputusan
           </ThemedText>
 
           {isPending ? (
             <>
-              <ThemedText type="small" themeColor="textSecondary">
+              <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
                 Setujui atau tolak pengajuan ini. Keputusan tersimpan dan langsung terlihat oleh
                 praktikan.
               </ThemedText>
@@ -185,8 +189,10 @@ export default function PermitDetailScreen() {
               {permit.decidedBy ? <InfoRow label="Oleh" value={permit.decidedBy} /> : null}
               {permit.decisionNote ? (
                 <View style={[styles.noteBlock, { borderTopColor: theme.border }]}>
-                  <ThemedText type="smallBold">Catatan keputusan</ThemedText>
-                  <ThemedText type="small" themeColor="textSecondary">
+                  <ThemedText type="labelSm" themeColor="onSurface">
+                    Catatan keputusan
+                  </ThemedText>
+                  <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
                     {permit.decisionNote}
                   </ThemedText>
                 </View>
@@ -203,7 +209,7 @@ export default function PermitDetailScreen() {
               }
             />
           ) : null}
-        </ThemedView>
+        </Card>
       </ScreenScroll>
 
       <BottomSheetModal
@@ -222,13 +228,15 @@ export default function PermitDetailScreen() {
         </View>
 
         <View style={styles.field}>
-          <ThemedText type="smallBold">Catatan keputusan (opsional)</ThemedText>
+          <ThemedText type="labelSm" themeColor="onSurface">
+            Catatan keputusan (opsional)
+          </ThemedText>
           <TextInput
             value={note}
             onChangeText={setNote}
             placeholder="Contoh: surat izin sudah diverifikasi"
-            placeholderTextColor={theme.textSecondary}
-            selectionColor={theme.link}
+            placeholderTextColor={theme.onSurfaceSecondary}
+            selectionColor={theme.accent}
             maxLength={160}
             multiline
             numberOfLines={3}
@@ -237,13 +245,13 @@ export default function PermitDetailScreen() {
             style={[
               styles.noteInput,
               {
-                backgroundColor: theme.highlight,
-                borderColor: theme.border,
-                color: theme.text,
+                backgroundColor: theme.surfaceAlt,
+                borderColor: theme.accent,
+                color: theme.onSurface,
               },
             ]}
           />
-          <ThemedText type="small" themeColor="textSecondary" style={styles.counter}>
+          <ThemedText type="bodySm" themeColor="onSurfaceSecondary" style={styles.counter}>
             {note.length}/160
           </ThemedText>
         </View>
@@ -269,12 +277,6 @@ export default function PermitDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  card: {
-    width: '100%',
-    padding: Spacing.three,
-    borderRadius: Spacing.three,
-    gap: Spacing.two,
-  },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -283,17 +285,12 @@ const styles = StyleSheet.create({
   },
   titleText: {
     flexShrink: 1,
-    fontWeight: 600,
-  },
-  sectionTitle: {
-    fontWeight: 600,
   },
   reasonBox: {
     padding: Spacing.three,
-    borderRadius: Spacing.two,
+    borderRadius: Radius.md,
   },
   noteBlock: {
-    marginTop: Spacing.one,
     paddingTop: Spacing.two,
     borderTopWidth: StyleSheet.hairlineWidth,
     gap: Spacing.one,
@@ -307,9 +304,9 @@ const styles = StyleSheet.create({
   noteInput: {
     minHeight: 88,
     borderWidth: 1,
-    borderRadius: Spacing.two,
+    borderRadius: Radius.md,
     padding: Spacing.three,
-    fontSize: 14,
+    ...Typography.bodyMd,
   },
   counter: {
     alignSelf: 'flex-end',

@@ -1,12 +1,13 @@
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ActionButton } from '@/components/action-button';
+import { Card } from '@/components/card';
 import { EmptyState } from '@/components/empty-state';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAppData } from '@/services';
 import type { PracticumClass } from '@/types/domain';
@@ -15,6 +16,7 @@ import type { PracticumClass } from '@/types/domain';
 export default function ClassListScreen() {
   const data = useAppData();
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
 
   const filtered = useMemo(() => {
@@ -37,45 +39,50 @@ export default function ClassListScreen() {
       style={[styles.container, { backgroundColor: theme.background }]}
       data={filtered}
       keyExtractor={(item) => item.id}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingBottom: Spacing.three + insets.bottom }]}
       keyboardShouldPersistTaps="handled"
       ListHeaderComponent={
         <View style={styles.header}>
           <View style={styles.heading}>
-            <ThemedText type="subtitle" style={styles.title}>
+            <ThemedText type="headlineLg" themeColor="text">
               Kelas Praktikum
             </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
+            <ThemedText type="bodyMd" themeColor="textSecondary">
               Kelola kelas dan daftar peserta praktikan.
             </ThemedText>
           </View>
 
           <ActionButton label="+ Kelas Baru" onPress={() => router.push('/asprak/kelas/baru')} />
 
-          <ThemedView
-            type="surfaceAlt"
-            style={[styles.searchBox, { borderColor: theme.border }]}>
+          <View
+            style={[
+              styles.searchBox,
+              { backgroundColor: theme.highlight, borderColor: theme.border },
+            ]}>
             <TextInput
               value={query}
               onChangeText={setQuery}
               placeholder="Cari nama, kode, atau ruang"
               placeholderTextColor={theme.textSecondary}
-              selectionColor={theme.link}
+              selectionColor={theme.accent}
               autoCapitalize="none"
               autoCorrect={false}
               returnKeyType="search"
               accessibilityLabel="Cari kelas praktikum"
-              style={[styles.searchInput, { color: theme.text, backgroundColor: theme.highlight }]}
+              style={[styles.searchInput, { color: theme.text }]}
             />
-          </ThemedView>
+          </View>
 
-          <ThemedText type="small" themeColor="textSecondary">
+          <ThemedText type="bodySm" themeColor="textSecondary">
             {filtered.length} dari {data.classes.length} kelas
           </ThemedText>
         </View>
       }
       renderItem={({ item }) => (
-        <ClassCard practicumClass={item} sessionCount={data.sessions.filter((session) => session.classId === item.id).length} />
+        <ClassCard
+          practicumClass={item}
+          sessionCount={data.sessions.filter((session) => session.classId === item.id).length}
+        />
       )}
       ListEmptyComponent={
         <EmptyState
@@ -104,35 +111,35 @@ function ClassCard({
   practicumClass: PracticumClass;
   sessionCount: number;
 }) {
-  const theme = useTheme();
-
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`Kelola kelas ${practicumClass.courseName}`}
-      onPress={() => router.push({ pathname: '/asprak/kelas/[id]', params: { id: practicumClass.id } })}
+      onPress={() =>
+        router.push({ pathname: '/asprak/kelas/[id]', params: { id: practicumClass.id } })
+      }
       style={({ pressed }) => pressed && styles.pressed}>
-      <ThemedView type="backgroundElement" style={styles.card}>
+      <Card>
         <View style={styles.cardHeader}>
-          <ThemedText type="default" style={styles.cardTitle}>
+          <ThemedText type="titleMd" themeColor="onSurface" style={styles.cardTitle}>
             {practicumClass.courseName}
           </ThemedText>
-          <ThemedText type="code" themeColor="textSecondary">
+          <ThemedText type="monoSm" themeColor="onSurfaceSecondary">
             {practicumClass.code}
           </ThemedText>
         </View>
 
-        <ThemedText type="small" themeColor="textSecondary">
+        <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
           {practicumClass.classGroup} · {practicumClass.room}
         </ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">
+        <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
           {practicumClass.participants.length} peserta · {sessionCount} sesi
         </ThemedText>
 
-        <ThemedText type="smallBold" style={{ color: theme.link }}>
+        <ThemedText type="labelLg" themeColor="onSurface">
           Kelola kelas →
         </ThemedText>
-      </ThemedView>
+      </Card>
     </Pressable>
   );
 }
@@ -154,38 +161,27 @@ const styles = StyleSheet.create({
   heading: {
     gap: Spacing.one,
   },
-  title: {
-    fontSize: 24,
-    lineHeight: 30,
-  },
   searchBox: {
-    padding: Spacing.one,
-    borderRadius: Spacing.two,
+    minHeight: 44,
+    justifyContent: 'center',
+    borderRadius: Radius.md,
     borderWidth: 1,
+    paddingHorizontal: Spacing.md,
   },
   searchInput: {
     minHeight: 42,
-    paddingHorizontal: Spacing.two + 2,
-    borderRadius: Spacing.two,
     fontSize: 14,
-  },
-  card: {
-    padding: Spacing.three,
-    borderRadius: Spacing.three,
-    gap: Spacing.one,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: Spacing.two,
-    marginBottom: Spacing.one,
   },
   cardTitle: {
     flexShrink: 1,
-    fontWeight: 600,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: 0.8,
   },
 });

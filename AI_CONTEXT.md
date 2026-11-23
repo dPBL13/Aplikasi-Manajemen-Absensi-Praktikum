@@ -26,7 +26,7 @@ Both modules read **one shared store** (`src/services`). A praktikan check-in is
 2. **Never create new domain types.** Everything comes from `src/types/domain.ts`. There is no other type source (the old `src/types/session.ts` shim was deleted).
 3. **Business rules live in the data layer**, not screens: session status transitions, double check-in prevention, delete cascades, duplicate NIM. See §7.
 4. **All mutations are `async` and return `MutationResult`** (`{ ok: true } | { ok: false, reason }`). `reason` is Indonesian text ready for `FeedbackBanner`.
-5. **Never hardcode hex colours.** Use `useTheme()` / `ThemedView` / `ThemedText` / `Palette`. See `UI_STYLE_GUIDE.md`.
+5. **Never hardcode hex colours.** Use `useTheme()` / `ThemedView` / `ThemedText` / `Card` / `Palette`. The app is dark-only (Eclipse & Moss); see `UI_STYLE_GUIDE.md`.
 6. **Routes are file-based.** A new screen = a new file under `src/app/`. Do not add manual route registries, and never create `ios/` or `android/` folders.
 7. **Current user identity is mocked** in `src/data/current-user.ts`. When auth lands, that file is replaced — not the screens.
 8. **Typed routes are intentionally disabled** (`app.json` → `experiments.typedRoutes: false`; `tsconfig.json` does not include `.expo/types`). The Windows dev-server watcher used to regenerate a polluted `router.d.ts` (non-route files added as routes, `/asprak` dropped), randomly breaking `tsc`. Use the route table in §8; navigate with plain strings or object form:
@@ -77,7 +77,7 @@ src/
     selectors.ts           Derived data (attendance summary, overview)
     mock/                  In-memory adapter (state + subscribe)
   types/domain.ts          CANONICAL domain model
-  utils/                   formatClock (HH:MM), formatDate/formatDateTime
+  utils/                   formatClock (HH:MM), formatDate/formatDateTime, date-label (day/date label ↔ Date)
 ```
 
 Repo-root files:
@@ -222,7 +222,7 @@ Rules for the adapter author:
 - Realtime requirement FR-15 is satisfied by `onSnapshot` in `subscribeData`.
 - Security rules are owned by the Backend module (FR-04/FR-22).
 
-**Identity hook:** `src/data/current-user.ts` exports `CURRENT_ASPRAK_NAME` and `CURRENT_PRACTIKAN_ID`. With auth, replace these with values from the auth context. `CURRENT_PRACTIKAN_ID` must equal the `Participant.id` used in the roster (`p1` in the seed = Anisa Rahmawati).
+**Identity hook:** `src/data/current-user.ts` still exports `CURRENT_ASPRAK_NAME` and `CURRENT_PRACTIKAN_ID` for legacy/mock code. Live identity comes from Firebase Auth via `useCurrentPraktikan()` (`userProfile.uid/name/nim`). **Auth `uid` is not a roster key:** `Participant.id` is a per-class roster id (`p1`, `par-…`), so praktikan lookups must match the roster by **NIM** (`sessionsForParticipant(..., nim)`, `findSessionParticipant(..., nim)`, `findParticipantByNim`). Never match roster rows by `uid`.
 
 ---
 
@@ -274,17 +274,19 @@ Navigation notes:
 
 ## 9. UI conventions
 
-Source of truth: `UI_STYLE_GUIDE.md`. Short version:
+Source of truth: `UI_STYLE_GUIDE.md`. The visual language is **Eclipse & Moss** (dark-only), sourced from `stitch_praktikum_absensi_ui_redesign/`. Short version:
 
-- Backgrounds: `ThemedView type="background | backgroundElement | surfaceAlt | highlight"`.
-- Text: `ThemedText type="small | smallBold | default | subtitle" themeColor="text | textSecondary | link"`.
+- Canvas: `#272757` (`background`), text `#FFFFE3` (`text`). Cream cards `#FFFFE3` (`backgroundElement`) with text `onSurface` `#4A4A4A`.
+- Backgrounds: `ThemedView type="background | backgroundElement | surfaceAlt | highlight"`. Use `Card` for the cream card pattern.
+- Text: `ThemedText` with the design scale (`display`, `displayMobile`, `headlineLg`, `headlineMd`, `titleMd`, `bodyMd`, `bodySm`, `labelLg`, `labelSm`, `monoSm`; legacy `default/small/smallBold/subtitle/code` aliases still work). Match the `themeColor` to the surface: `text` on the canvas, `onSurface` on cream.
+- Fonts: Red Hat Display (display), Commissioner (body/label), Spline Sans Mono (NIM/time), loaded in `src/app/_layout.tsx`.
 - Buttons: `ActionButton` with `tone="primary | secondary | danger"` — no custom buttons.
-- Forms: `FormField` (label + error + themed input).
+- Forms: `FormField` (label + error + themed text input), `SelectField` (dropdown bottom sheet for single choice), `DateTimeField` (native calendar/clock picker via `@expo/ui`; text-input fallback on web).
 - Page wrapper: `ScreenScroll` (responsive padding + max width).
 - Empty lists: `EmptyState` (title, hint, optional action).
 - Status/permit/category pills: `SessionStatusBadge`, `PermitStatusBadge`, `PermitCategoryBadge`, `AttendanceBadge` from `components/status-badge.tsx`.
 - Feedback after an action: `FeedbackBanner` with `{ tone: 'success' | 'error', message }`.
-- Confirmations/destructive flows: `BottomSheetModal`.
+- Confirmations/destructive flows: `BottomSheetModal` (cream sheet).
 - Text is Indonesian; code identifiers are English.
 
 ---
@@ -385,4 +387,5 @@ Coverage details:
 - **Do not import `src/data/seed.ts` outside `src/services/mock`.**
 - **`session.participants[].checkInAt` is the attendance truth**; there is no separate attendance collection.
 - **Screens must not compute rules** (e.g. "can check in?"). They may compute presentation only.
+- **`@expo/ui` is Android/iOS only.** `@expo/ui/community/datetime-picker` renders nothing on web, so `DateTimeField` falls back to a text input there. Do not import `@expo/ui/swift-ui` or `@expo/ui/jetpack-compose` in shared code.
 - **Windows dev**: commands are run in PowerShell; the repo is `LF`-based (git may warn about CRLF). Do not commit lockfile-only churn.

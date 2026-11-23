@@ -1,20 +1,23 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+
     // Fungsi pembantu untuk memeriksa autentikasi
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    // Fungsi pembantu untuk mengambil data user
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    function userDocPath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
     }
 
-    // Fungsi pembantu untuk memeriksa apakah pengguna adalah Asprak
+    // `exists()` mencegah error ketika dokumen profil belum sempat dibuat
+    // (mis. registrasi baru). Tanpa guard ini, `get(...).data.role` melempar
+    // error dan seluruh aturan write ikut ditolak.
     function isAsprak() {
-      return isAuthenticated() && getUserData().role == 'asprak';
+      return isAuthenticated()
+        && exists(userDocPath())
+        && get(userDocPath()).data.role == 'asprak';
     }
 
     // Koleksi Profil Pengguna
@@ -28,13 +31,13 @@ service cloud.firestore {
     // Koleksi Kelas Praktikum (FR-05)
     match /classes/{classId} {
       allow read: if true; // Praktikan dan Asprak dapat melihat kelas
-      allow write: if isAsprak() || isAuthenticated();
+      allow write: if isAuthenticated();
     }
 
     // Koleksi Sesi Praktikum (FR-07, FR-08, FR-10)
     match /sessions/{sessionId} {
       allow read: if true;
-      allow create, delete: if isAsprak() || isAuthenticated();
+      allow create, delete: if isAuthenticated();
       // Asprak dapat mengubah status sesi, Praktikan dapat mencatat checkInAt
       allow update: if isAuthenticated();
     }
@@ -44,7 +47,7 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isAuthenticated();
       // Asprak dapat mengubah status keputusan izin
-      allow update: if isAsprak() || isAuthenticated();
+      allow update: if isAuthenticated();
       allow delete: if isAsprak();
     }
   }

@@ -2,11 +2,12 @@ import { Tabs, router } from 'expo-router';
 import { Pressable, useWindowDimensions } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
+import { Fonts, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
  * Tab modul Asisten Praktikum.
- * - HP: tab bar di bawah.
+ * - HP: tab bar di bawah (eclipse deep).
  * - Layar lebar (>= 900px): sidebar kiri (FR-14).
  */
 export default function AsprakTabsLayout() {
@@ -17,17 +18,21 @@ export default function AsprakTabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: theme.backgroundSelected },
+        headerStyle: {
+          backgroundColor: theme.background,
+          borderBottomColor: theme.border,
+          borderBottomWidth: 1,
+        },
         headerTintColor: theme.text,
-        headerTitleStyle: { fontWeight: 600, fontSize: 18 },
-        tabBarActiveTintColor: theme.link,
+        headerTitleStyle: { fontFamily: Fonts.display, fontSize: 20 },
+        tabBarActiveTintColor: theme.text,
         tabBarInactiveTintColor: theme.textSecondary,
         tabBarStyle: {
           backgroundColor: theme.backgroundSelected,
-          borderTopColor: theme.border,
-          borderRightColor: theme.border,
+          borderTopColor: theme.highlight,
+          borderRightColor: theme.highlight,
         },
-        tabBarLabelStyle: { fontSize: 12, fontWeight: 700 },
+        tabBarLabelStyle: { fontFamily: Fonts.bodySemiBold, fontSize: 11 },
         tabBarPosition: isWide ? 'left' : 'bottom',
         tabBarVariant: isWide ? 'material' : 'uikit',
         headerRight: () => (
@@ -36,8 +41,16 @@ export default function AsprakTabsLayout() {
             accessibilityLabel="Ganti peran"
             onPress={() => router.replace('/')}
             hitSlop={8}
-            style={{ paddingHorizontal: 12 }}>
-            <ThemedText type="smallBold" style={{ color: theme.link }}>
+            style={{
+              backgroundColor: theme.highlight,
+              borderColor: theme.border,
+              borderWidth: 1,
+              borderRadius: Radius.full,
+              paddingVertical: Spacing.one,
+              paddingHorizontal: Spacing.md,
+              marginRight: Spacing.three,
+            }}>
+            <ThemedText type="labelSm" themeColor="text">
               Ganti peran
             </ThemedText>
           </Pressable>

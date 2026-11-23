@@ -5,21 +5,14 @@
  * - participantName dan nim dibiarkan string kosong.
  */
 import { useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { ActionButton } from '@/components/action-button';
+import { BottomSheetModal } from '@/components/bottom-sheet-modal';
+import { FeedbackBanner } from '@/components/feedback-banner';
+import { FormField } from '@/components/form-field';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { dataService } from '@/services';
 import type { Permit, PracticumSession } from '@/types/domain';
@@ -124,129 +117,89 @@ export function LeaveRequestModal({ visible, session, onClose, onSuccess }: Leav
   };
 
   return (
-    <Modal visible={visible} animationType="fade" transparent onRequestClose={handleClose}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={[styles.backdrop, { backgroundColor: theme.overlay }]}
-      >
-        <ThemedView type="backgroundElement" style={[styles.sheet, { borderColor: theme.border }]}>
-          <ScrollView contentContainerStyle={styles.scrollContent}>
-            <View style={styles.sheetHeader}>
-              <ThemedText type="smallBold" style={styles.sheetTitle}>
-                Form Pengajuan Izin
-              </ThemedText>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Tutup form"
-                onPress={handleClose}
-                hitSlop={8}
-              >
-                <ThemedText type="smallBold" themeColor="textSecondary">
-                  ✕ Tutup
-                </ThemedText>
-              </Pressable>
-            </View>
+    <BottomSheetModal
+      visible={visible}
+      title="Form Pengajuan Izin"
+      description="Jelaskan alasan ketidakhadiran Anda pada sesi ini."
+      onClose={handleClose}>
+      <View style={[styles.sessionBox, { backgroundColor: theme.surfaceAlt }]}>
+        <ThemedText type="titleMd" themeColor="onSurface">
+          {session.courseName}
+        </ThemedText>
+        <ThemedText type="monoSm" themeColor="onSurfaceSecondary">
+          {session.classGroup} · {session.dayLabel}, {session.dateLabel} ({session.startTime}–
+          {session.endTime})
+        </ThemedText>
+      </View>
 
-            <ThemedView type="surfaceAlt" style={[styles.sessionBox, { borderColor: theme.border }]}>
-              <ThemedText type="smallBold">{session.courseName}</ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                {session.classGroup} · {session.dayLabel}, {session.dateLabel} ({session.startTime} -{' '}
-                {session.endTime})
-              </ThemedText>
-            </ThemedView>
+      {errorMsg ? (
+        <FeedbackBanner tone="error" message={errorMsg} onDismiss={() => setErrorMsg(null)} />
+      ) : null}
 
-            {errorMsg ? (
-              <ThemedView
-                type="dangerBackground"
-                style={[styles.errorBanner, { borderColor: theme.danger }]}
-              >
-                <ThemedText type="smallBold" style={{ color: theme.danger }}>
-                  {errorMsg}
-                </ThemedText>
-              </ThemedView>
-            ) : null}
+      <View style={styles.section}>
+        <FormField
+          label="Alasan izin"
+          value={reason}
+          onChangeText={setReason}
+          placeholder="Contoh: mengalami demam tinggi dan perlu istirahat"
+          multiline
+          numberOfLines={3}
+          accessibilityLabel="Alasan izin"
+        />
+        <ThemedText type="monoSm" themeColor="onSurfaceSecondary" style={styles.counter}>
+          {reason.trim().length} karakter
+        </ThemedText>
+      </View>
 
-            <View style={styles.section}>
-              <View style={styles.labelRow}>
-                <ThemedText type="smallBold">
-                  Alasan Izin <ThemedText themeColor="danger">*</ThemedText>
-                </ThemedText>
-                <ThemedText type="code" themeColor="textSecondary">
-                  {reason.trim().length} karakter
-                </ThemedText>
-              </View>
-              <TextInput
-                style={[
-                  styles.textArea,
-                  { backgroundColor: theme.highlight, borderColor: theme.border, color: theme.text },
-                ]}
-                placeholder="Tuliskan alasan izin Anda secara jelas (contoh: Mengalami demam tinggi dan perlu istirahat)..."
-                placeholderTextColor={theme.textSecondary}
-                value={reason}
-                onChangeText={setReason}
-                multiline
-                numberOfLines={3}
-                textAlignVertical="top"
-              />
-            </View>
+      <View style={[styles.aiNoticeBox, { backgroundColor: theme.surfaceAlt }]}>
+        <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
+          Alasan izin akan dianalisis otomatis oleh sistem AI untuk memprediksi kategori izin sebagai
+          informasi pendukung. Keputusan penerimaan atau penolakan tetap ditentukan oleh Asisten
+          Praktikum.
+        </ThemedText>
+      </View>
 
-            <ThemedView type="surfaceAlt" style={[styles.aiNoticeBox, { borderColor: theme.border }]}>
-              <ThemedText type="code" themeColor="textSecondary" style={styles.aiNoticeText}>
-                💡 Alasan izin akan dianalisis otomatis oleh sistem AI untuk memprediksi kategori izin
-                sebagai informasi pendukung. Keputusan penerimaan atau penolakan tetap ditentukan oleh
-                Asisten Praktikum.
-              </ThemedText>
-            </ThemedView>
-
-            <View style={styles.actionRow}>
-              <ActionButton
-                label="Batal"
-                onPress={handleClose}
-                tone="secondary"
-                disabled={isSubmitting}
-                style={styles.actionBtn}
-              />
-              <ActionButton
-                label={isSubmitting ? 'Mengirim...' : 'Kirim Pengajuan Izin'}
-                onPress={handleSubmit}
-                tone="primary"
-                disabled={isSubmitting}
-                style={styles.actionBtn}
-              />
-            </View>
-          </ScrollView>
-        </ThemedView>
-      </KeyboardAvoidingView>
-    </Modal>
+      <View style={styles.actionRow}>
+        <ActionButton
+          label="Batal"
+          onPress={handleClose}
+          tone="secondary"
+          disabled={isSubmitting}
+          style={styles.actionBtn}
+        />
+        <ActionButton
+          label={isSubmitting ? 'Mengirim…' : 'Kirim pengajuan izin'}
+          onPress={handleSubmit}
+          tone="primary"
+          disabled={isSubmitting}
+          style={styles.actionBtn}
+        />
+      </View>
+    </BottomSheetModal>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.three },
-  sheet: {
-    width: '100%',
-    maxWidth: 560,
-    maxHeight: '90%',
-    borderRadius: Spacing.three,
-    borderWidth: 1,
-    overflow: 'hidden',
+  sessionBox: {
+    padding: Spacing.three,
+    borderRadius: Radius.md,
+    gap: Spacing.half,
   },
-  scrollContent: { padding: Spacing.four, gap: Spacing.three },
-  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  sheetTitle: { fontSize: 18 },
-  sessionBox: { padding: Spacing.two + 4, borderRadius: Spacing.two, borderWidth: 1, gap: Spacing.half },
-  errorBanner: { padding: Spacing.two, borderRadius: Spacing.one, borderWidth: 1 },
-  section: { gap: Spacing.one },
-  labelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  textArea: {
-    minHeight: 80,
-    borderRadius: Spacing.two,
-    borderWidth: 1,
-    padding: Spacing.two + 2,
-    fontSize: 14,
+  section: {
+    gap: Spacing.one,
   },
-  aiNoticeBox: { padding: Spacing.two, borderRadius: Spacing.two, borderWidth: 1 },
-  aiNoticeText: { fontSize: 12, lineHeight: 16 },
-  actionRow: { flexDirection: 'row', gap: Spacing.two, marginTop: Spacing.one },
-  actionBtn: { flex: 1 },
+  counter: {
+    alignSelf: 'flex-end',
+  },
+  aiNoticeBox: {
+    padding: Spacing.three,
+    borderRadius: Radius.md,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+  },
+  actionBtn: {
+    flex: 1,
+  },
 });

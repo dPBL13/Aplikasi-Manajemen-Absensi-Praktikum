@@ -1,12 +1,13 @@
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Card } from '@/components/card';
 import { EmptyState } from '@/components/empty-state';
 import { StatTile } from '@/components/stat-tile';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAppData } from '@/services';
 import { asprakOverview, summarizeAttendance } from '@/services/selectors';
@@ -25,12 +26,12 @@ const FILTERS: { value: StatusFilter; label: string }[] = [
 export default function RecapScreen() {
   const data = useAppData();
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState<StatusFilter>('semua');
   const overview = asprakOverview(data);
 
   const sessions = useMemo(
-    () =>
-      data.sessions.filter((session) => filter === 'semua' || session.status === filter),
+    () => data.sessions.filter((session) => filter === 'semua' || session.status === filter),
     [data.sessions, filter],
   );
 
@@ -39,14 +40,14 @@ export default function RecapScreen() {
       style={[styles.container, { backgroundColor: theme.background }]}
       data={sessions}
       keyExtractor={(session) => session.id}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingBottom: Spacing.three + insets.bottom }]}
       ListHeaderComponent={
         <View style={styles.header}>
           <View style={styles.heading}>
-            <ThemedText type="subtitle" style={styles.title}>
+            <ThemedText type="headlineLg" themeColor="text">
               Rekap Kehadiran
             </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
+            <ThemedText type="bodyMd" themeColor="textSecondary">
               Ringkasan presensi dan waktu check-in praktikan per sesi.
             </ThemedText>
           </View>
@@ -78,14 +79,14 @@ export default function RecapScreen() {
                   style={({ pressed }) => [
                     styles.chip,
                     {
-                      backgroundColor: isActive ? theme.highlight : theme.backgroundElement,
-                      borderColor: theme.border,
+                      backgroundColor: isActive ? theme.accent : theme.highlight,
+                      borderColor: isActive ? theme.accent : theme.border,
                     },
                     pressed && styles.pressed,
                   ]}>
                   <ThemedText
-                    type="small"
-                    style={{ color: isActive ? theme.text : theme.textSecondary }}>
+                    type="labelSm"
+                    style={{ color: isActive ? theme.accentText : theme.text }}>
                     {option.label}
                   </ThemedText>
                 </Pressable>
@@ -105,34 +106,34 @@ export default function RecapScreen() {
               router.push({ pathname: '/asprak/session/[id]', params: { id: item.id } })
             }
             style={({ pressed }) => pressed && styles.pressed}>
-            <ThemedView type="backgroundElement" style={styles.card}>
+            <Card>
               <View style={styles.cardHeader}>
-                <ThemedText type="default" style={styles.cardTitle}>
+                <ThemedText type="titleMd" themeColor="onSurface" style={styles.cardTitle}>
                   {item.courseName}
                 </ThemedText>
-                <ThemedText type="code" themeColor="textSecondary">
+                <ThemedText type="headlineMd" style={{ color: theme.accent }}>
                   {summary.rate}%
                 </ThemedText>
               </View>
 
-              <ThemedText type="small" themeColor="textSecondary">
+              <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
                 {item.classGroup} · {item.dayLabel}, {item.dateLabel} · {item.startTime}–
                 {item.endTime}
               </ThemedText>
 
-              <View style={[styles.bar, { backgroundColor: theme.backgroundSelected }]}>
+              <View style={[styles.bar, { backgroundColor: theme.surfaceAlt }]}>
                 <View
                   style={[
                     styles.barFill,
-                    { width: `${summary.rate}%`, backgroundColor: theme.success },
+                    { width: `${summary.rate}%`, backgroundColor: theme.accent },
                   ]}
                 />
               </View>
 
-              <ThemedText type="small" themeColor="textSecondary">
+              <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
                 {summary.attended}/{summary.total} hadir · {summary.absent} belum presensi
               </ThemedText>
-            </ThemedView>
+            </Card>
           </Pressable>
         );
       }}
@@ -165,10 +166,6 @@ const styles = StyleSheet.create({
   heading: {
     gap: Spacing.one,
   },
-  title: {
-    fontSize: 24,
-    lineHeight: 30,
-  },
   statRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -180,38 +177,31 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   chip: {
-    paddingVertical: Spacing.one + 2,
-    paddingHorizontal: Spacing.three,
-    borderRadius: 999,
+    paddingVertical: Spacing.one,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radius.full,
     borderWidth: 1,
-  },
-  card: {
-    padding: Spacing.three,
-    borderRadius: Spacing.three,
-    gap: Spacing.one,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: Spacing.two,
-    marginBottom: Spacing.one,
   },
   cardTitle: {
     flexShrink: 1,
-    fontWeight: 600,
   },
   bar: {
     height: 8,
-    borderRadius: 999,
+    borderRadius: Radius.full,
     overflow: 'hidden',
     marginVertical: Spacing.one,
   },
   barFill: {
     height: '100%',
-    borderRadius: 999,
+    borderRadius: Radius.full,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: 0.8,
   },
 });

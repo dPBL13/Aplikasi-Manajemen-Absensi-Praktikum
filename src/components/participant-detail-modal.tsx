@@ -32,15 +32,15 @@ export function ParticipantDetailModal({
         <View style={styles.content}>
           <View style={styles.identity}>
             <View style={[styles.avatar, { backgroundColor: theme.accent }]}>
-              <ThemedText type="smallBold" style={[styles.avatarText, { color: theme.accentText }]}>
+              <ThemedText type="labelLg" style={[styles.avatarText, { color: theme.accentText }]}>
                 {getInitials(participant.name)}
               </ThemedText>
             </View>
             <View style={styles.identityText}>
-              <ThemedText type="default" style={styles.name}>
+              <ThemedText type="titleMd" themeColor="onSurface" style={styles.name}>
                 {participant.name}
               </ThemedText>
-              <ThemedText type="code" themeColor="textSecondary">
+              <ThemedText type="monoSm" themeColor="onSurfaceSecondary">
                 {participant.nim}
               </ThemedText>
             </View>
@@ -52,7 +52,7 @@ export function ParticipantDetailModal({
             <InfoRow
               label="Waktu presensi"
               value={participant.checkInAt ?? 'Belum tercatat'}
-              valueType={participant.checkInAt ? 'code' : 'small'}
+              valueType={participant.checkInAt ? 'monoSm' : 'bodySm'}
             />
             <InfoRow label="Praktikum" value={session.courseName} />
             <InfoRow label="Kelas" value={session.classGroup} />
@@ -63,7 +63,7 @@ export function ParticipantDetailModal({
           </View>
 
           {!participant.checkInAt ? (
-            <ThemedText type="small" themeColor="textSecondary">
+            <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
               Praktikan ini belum melakukan presensi pada sesi ini.
             </ThemedText>
           ) : null}

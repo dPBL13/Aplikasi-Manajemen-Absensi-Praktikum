@@ -2,10 +2,11 @@ import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ActionButton } from '@/components/action-button';
+import { Card } from '@/components/card';
 import { ScreenScroll } from '@/components/screen-scroll';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { useAppData } from '@/services';
@@ -22,21 +23,17 @@ export default function RolePickerScreen() {
 
   return (
     <ScreenScroll>
-      {/* Kartu Status Autentikasi Pengguna */}
       {user ? (
-        <ThemedView
-          type="backgroundElement"
-          style={[styles.authCard, { borderColor: theme.accent }]}
-        >
+        <Card style={styles.authCard}>
           <View style={styles.authInfo}>
-            <ThemedText type="smallBold" style={{ color: theme.accent }}>
-              Akun Aktif: {role === 'asprak' ? 'Asisten Praktikum' : 'Praktikan'}
+            <ThemedText type="labelSm" themeColor="onSurfaceSecondary">
+              Akun Aktif · {role === 'asprak' ? 'Asisten Praktikum' : 'Praktikan'}
             </ThemedText>
-            <ThemedText type="subtitle">
+            <ThemedText type="displayMobile" themeColor="onSurface">
               {userProfile?.name || user.displayName || 'Pengguna'}
             </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              {userProfile?.nim ? `NIM: ${userProfile.nim} · ` : ''}
+            <ThemedText type="monoSm" themeColor="onSurfaceSecondary">
+              {userProfile?.nim ? `NIM ${userProfile.nim} · ` : ''}
               {user.email}
             </ThemedText>
           </View>
@@ -44,14 +41,10 @@ export default function RolePickerScreen() {
           <View style={styles.authActions}>
             <ActionButton
               label={
-                role === 'asprak'
-                  ? 'Buka Dashboard Asisten'
-                  : 'Buka Dashboard Praktikan'
+                role === 'asprak' ? 'Buka Dashboard Asisten' : 'Buka Dashboard Praktikan'
               }
               tone="primary"
-              onPress={() =>
-                router.replace(role === 'asprak' ? '/asprak' : '/praktikan')
-              }
+              onPress={() => router.replace(role === 'asprak' ? '/asprak' : '/praktikan')}
             />
             <ActionButton
               label="Keluar Akun"
@@ -61,16 +54,19 @@ export default function RolePickerScreen() {
               }}
             />
           </View>
-        </ThemedView>
+        </Card>
       ) : (
-        <ThemedView
-          type="backgroundElement"
-          style={[styles.authCard, { borderColor: theme.border }]}
-        >
+        <Card style={styles.authCard}>
           <View style={styles.authInfo}>
-            <ThemedText type="subtitle">Autentikasi Pengguna</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              Masuk dengan akun praktikum Anda untuk sinkronisasi otomatis via Cloud Firestore.
+            <ThemedText type="labelSm" themeColor="onSurfaceSecondary">
+              Autentikasi Pengguna
+            </ThemedText>
+            <ThemedText type="displayMobile" themeColor="onSurface">
+              Masuk ke Akun
+            </ThemedText>
+            <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
+              Masuk dengan akun praktikum Anda untuk sinkronisasi otomatis via Cloud
+              Firestore.
             </ThemedText>
           </View>
           <View style={styles.authActions}>
@@ -85,13 +81,15 @@ export default function RolePickerScreen() {
               onPress={() => router.push('/(auth)/register')}
             />
           </View>
-        </ThemedView>
+        </Card>
       )}
 
       <View style={styles.heading}>
-        <ThemedText type="subtitle">Mode Demo & Akses Langsung</ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">
-          Pilih perspektif di bawah untuk mengakses modul secara langsung:
+        <ThemedText type="headlineLg" themeColor="text">
+          Mode Demo & Akses Langsung
+        </ThemedText>
+        <ThemedText type="bodyMd" themeColor="textSecondary">
+          Pilih perspektif di bawah untuk mengakses modul secara langsung.
         </ThemedText>
       </View>
 
@@ -111,10 +109,15 @@ export default function RolePickerScreen() {
         onPress={() => router.replace('/praktikan')}
       />
 
-      <ThemedView style={[styles.note, { borderColor: theme.border }]}>
-        <ThemedText type="smallBold">Integrasi Backend Firebase & Gemini AI</ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">
-          Modul Backend terhubung ke Cloud Firestore dan Google Gemini AI untuk klasifikasi alasan izin otomatis.
+      <ThemedView
+        type="highlight"
+        style={[styles.note, { borderColor: theme.border }]}>
+        <ThemedText type="labelLg" themeColor="text">
+          Integrasi Backend Firebase & Gemini AI
+        </ThemedText>
+        <ThemedText type="bodySm" themeColor="textSecondary">
+          Modul Backend terhubung ke Cloud Firestore dan Google Gemini AI untuk klasifikasi
+          alasan izin otomatis.
         </ThemedText>
       </ThemedView>
     </ScreenScroll>
@@ -137,24 +140,25 @@ function RoleCard({ title, description, meta, actionLabel, onPress }: RoleCardPr
       accessibilityRole="button"
       accessibilityLabel={actionLabel}
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.card,
-        { backgroundColor: theme.backgroundElement, borderColor: theme.border },
-        pressed && styles.pressed,
-      ]}
-    >
-      <ThemedText type="default" style={styles.cardTitle}>
-        {title}
-      </ThemedText>
-      <ThemedText type="small" themeColor="textSecondary">
-        {description}
-      </ThemedText>
-      <ThemedText type="small" themeColor="textSecondary">
-        {meta}
-      </ThemedText>
-      <ThemedText type="smallBold" style={{ color: theme.link }}>
-        {actionLabel} →
-      </ThemedText>
+      style={({ pressed }) => pressed && styles.pressed}>
+      <Card>
+        <View style={styles.cardHeader}>
+          <ThemedText type="titleMd" themeColor="onSurface" style={styles.cardTitle}>
+            {title}
+          </ThemedText>
+          <ThemedText type="titleMd" themeColor="onSurface">
+            →
+          </ThemedText>
+        </View>
+        <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
+          {description}
+        </ThemedText>
+        <View style={[styles.meta, { backgroundColor: theme.surfaceAlt }]}>
+          <ThemedText type="monoSm" themeColor="onSurfaceAlt">
+            {meta}
+          </ThemedText>
+        </View>
+      </Card>
     </Pressable>
   );
 }
@@ -162,8 +166,6 @@ function RoleCard({ title, description, meta, actionLabel, onPress }: RoleCardPr
 const styles = StyleSheet.create({
   authCard: {
     padding: Spacing.three,
-    borderRadius: Spacing.three,
-    borderWidth: 1.5,
     gap: Spacing.three,
   },
   authInfo: {
@@ -176,22 +178,27 @@ const styles = StyleSheet.create({
     gap: Spacing.one,
     marginTop: Spacing.two,
   },
-  card: {
-    padding: Spacing.three,
-    borderRadius: Spacing.three,
-    borderWidth: 1,
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     gap: Spacing.two,
   },
   cardTitle: {
-    fontWeight: '700',
+    flexShrink: 1,
+  },
+  meta: {
+    borderRadius: Radius.md,
+    paddingVertical: Spacing.one,
+    paddingHorizontal: Spacing.md,
   },
   note: {
     padding: Spacing.three,
-    borderRadius: Spacing.three,
+    borderRadius: Radius.lg,
     borderWidth: 1,
     gap: Spacing.one,
   },
   pressed: {
-    opacity: 0.75,
+    opacity: 0.8,
   },
 });

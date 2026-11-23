@@ -3,16 +3,18 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { ActionButton } from '@/components/action-button';
+import { Card } from '@/components/card';
 import { FeedbackBanner, type FeedbackMessage } from '@/components/feedback-banner';
 import { FormField } from '@/components/form-field';
 import { ScreenScroll } from '@/components/screen-scroll';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
+import { useTheme } from '@/hooks/use-theme';
 
 export default function LoginScreen() {
   const { login } = useAuth();
+  const theme = useTheme();
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -21,7 +23,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!identifier.trim()) {
-      setFeedback({ tone: 'error', message: 'Email atau NIM tidak boleh kosong.' });
+      setFeedback({ tone: 'error', message: 'Email tidak boleh kosong.' });
       return;
     }
     if (!password) {
@@ -48,10 +50,12 @@ export default function LoginScreen() {
   return (
     <ScreenScroll>
       <View style={styles.container}>
-        <ThemedView type="backgroundElement" style={styles.card}>
+        <Card style={styles.card}>
           <View style={styles.header}>
-            <ThemedText type="title">Selamat Datang</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
+            <ThemedText type="displayMobile" themeColor="onSurface">
+              Selamat Datang
+            </ThemedText>
+            <ThemedText type="bodyMd" themeColor="onSurfaceSecondary">
               Masuk dengan akun praktikum Anda untuk mengelola atau mencatat presensi.
             </ThemedText>
           </View>
@@ -66,13 +70,13 @@ export default function LoginScreen() {
 
           <View style={styles.form}>
             <FormField
-              label="Email atau NIM"
-              placeholder="Contoh: 24060124130077 atau nama@students.undip.ac.id"
+              label="Email"
+              placeholder="nama@students.undip.ac.id"
               value={identifier}
               onChangeText={setIdentifier}
               autoCapitalize="none"
               keyboardType="email-address"
-              hint="Masukkan NIM 14 digit atau alamat email terdaftar."
+              hint="Gunakan email yang Anda daftarkan. Login dengan NIM belum tersedia."
             />
 
             <FormField
@@ -92,8 +96,8 @@ export default function LoginScreen() {
             />
           </View>
 
-          <View style={styles.footer}>
-            <ThemedText type="small" themeColor="textSecondary">
+          <View style={[styles.footer, { borderTopColor: theme.border }]}>
+            <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
               Belum memiliki akun?
             </ThemedText>
             <ActionButton
@@ -102,7 +106,7 @@ export default function LoginScreen() {
               onPress={() => router.push('/(auth)/register')}
             />
           </View>
-        </ThemedView>
+        </Card>
       </View>
     </ScreenScroll>
   );
@@ -114,17 +118,18 @@ const styles = StyleSheet.create({
   },
   card: {
     padding: Spacing.four,
-    borderRadius: Spacing.three,
     gap: Spacing.three,
   },
   header: {
     gap: Spacing.one,
   },
   form: {
-    gap: Spacing.three,
+    gap: Spacing.md,
   },
   footer: {
     marginTop: Spacing.two,
+    paddingTop: Spacing.md,
+    borderTopWidth: 1,
     gap: Spacing.two,
     alignItems: 'center',
   },

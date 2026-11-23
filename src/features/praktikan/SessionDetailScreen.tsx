@@ -1,17 +1,18 @@
+import { useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
+
 import { ActionButton } from '@/components/action-button';
+import { Card } from '@/components/card';
 import { EmptyState } from '@/components/empty-state';
 import { FeedbackBanner, type FeedbackMessage } from '@/components/feedback-banner';
 import { ScreenScroll } from '@/components/screen-scroll';
 import { SessionStatusBadge } from '@/components/status-badge';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { dataService, useAppData } from '@/services';
 import { findSession, findSessionParticipant } from '@/services/selectors';
 import type { Permit } from '@/types/domain';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { AICard } from './components/AICard';
 import { LeaveStatusBadge } from './components/LeaveStatusBadge';
 import { LeaveRequestModal } from './LeaveRequestModal';
@@ -23,7 +24,13 @@ import { useCurrentPraktikan } from './use-current-praktikan';
  * - handleCheckIn memanggil dataService.checkIn dan menampilkan FeedbackBanner.
  * - Logika tambahan memastikan tidak ada pemanggilan API bila sudah hadir.
  */
-export function SessionDetailScreen({ sessionId, onBack }: { sessionId: string; onBack: () => void; }) {
+export function SessionDetailScreen({
+  sessionId,
+  onBack,
+}: {
+  sessionId: string;
+  onBack: () => void;
+}) {
   const theme = useTheme();
   const data = useAppData();
   const currentUser = useCurrentPraktikan();
@@ -46,13 +53,13 @@ export function SessionDetailScreen({ sessionId, onBack }: { sessionId: string; 
     );
   }
 
-  const me = findSessionParticipant(session, CURRENT_PRACTIKAN_ID);
+  const me = findSessionParticipant(session, CURRENT_PRACTIKAN_ID, currentUser.nim);
   const present = Boolean(me?.checkInAt);
   const canCheckIn = session.status === 'berlangsung' && !present;
 
   const handleCheckIn = async () => {
     setBusy(true);
-    const result = await dataService.checkIn(session.id, CURRENT_PRACTIKAN_ID);
+    const result = await dataService.checkIn(session.id, me?.id ?? CURRENT_PRACTIKAN_ID);
     setBusy(false);
     setFeedback(
       result.ok
@@ -62,7 +69,11 @@ export function SessionDetailScreen({ sessionId, onBack }: { sessionId: string; 
   };
 
   const leave = (data.permits ?? []).find(
-    (p: Permit) => p.sessionId === session.id && p.participantId === CURRENT_PRACTIKAN_ID,
+    (p: Permit) =>
+      p.sessionId === session.id &&
+      (p.participantId === CURRENT_PRACTIKAN_ID ||
+        p.participantId === me?.id ||
+        (currentUser.nim !== '' && p.nim === currentUser.nim)),
   ) as Permit | undefined;
   const hasAcceptedLeave = leave?.status === 'diterima';
   const canRequestLeave = !present && !hasAcceptedLeave;
@@ -75,96 +86,142 @@ export function SessionDetailScreen({ sessionId, onBack }: { sessionId: string; 
   } else if (session.status === 'selesai') {
     helper = 'Sesi sudah selesai, presensi terkunci.';
   } else {
-    helper = '⚡ Sesi sedang berlangsung! Silakan lakukan presensi sekarang.';
+    helper = 'Sesi sedang berlangsung. Silakan lakukan presensi sekarang.';
   }
 
+  const statusLabel = present
+    ? `Hadir (${me?.checkInAt} WIB)`
+    : leave
+      ? `Status izin: ${leave.status}`
+      : session.status === 'selesai'
+        ? 'Tidak hadir'
+        : 'Belum melakukan presensi';
+
   return (
-    <ScrollView contentContainerStyle={styles.scrollContent}>
-      <Pressable
-        onPress={onBack}
-        accessibilityRole="button"
-        accessibilityLabel="Kembali ke daftar sesi"
-        style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
-      >
-        <ThemedText type="smallBold" themeColor="link">← Kembali ke Jadwal Praktikum</ThemedText>
-      </Pressable>
-
-      {feedback && (
-        <FeedbackBanner tone={feedback.tone} message={feedback.message} onDismiss={() => setFeedback(null)} />
-      )}
-
-      <ThemedView type="backgroundElement" style={[styles.card, { borderColor: theme.border }]}>
-        <View style={styles.cardHeader}>
-          <View style={{ flex: 1 }}>
-            <ThemedText type="small" themeColor="textSecondary">Mata Kuliah Praktikum</ThemedText>
-            <ThemedText type="smallBold" style={styles.courseTitle}>{session.courseName}</ThemedText>
-          </View>
-          <SessionStatusBadge status={session.status} />
-        </View>
-        <View style={[styles.divider, { backgroundColor: theme.border }]} />
-        <View style={styles.metaGrid}>
-          <DetailRow label="Kelompok Kelas" value={session.classGroup} />
-          <DetailRow label="Ruangan Lab" value={session.room} />
-          <DetailRow label="Jadwal Praktikum" value={`${session.dayLabel}, ${session.dateLabel}`} />
-          <DetailRow label="Waktu Pelaksanaan" value={`${session.startTime} - ${session.endTime} WIB`} />
-          <DetailRow label="Asisten Penanggung Jawab" value={session.asprakName} />
-          {session.openedAt && <DetailRow label="Dibuka Pada" value={`${session.openedAt} WIB`} />}
-          {session.closedAt && <DetailRow label="Ditutup Pada" value={`${session.closedAt} WIB`} />}
-          {session.closingNote && <DetailRow label="Catatan Penutupan" value={session.closingNote} />}
-        </View>
-      </ThemedView>
-
-      <ThemedView type="surfaceAlt" style={[styles.card, { borderColor: theme.border }]}>
-        <ThemedText type="smallBold" style={styles.sectionTitle}>Status Kehadiran Anda</ThemedText>
-        <ThemedView type="highlight" style={styles.statusBox}>
-          <ThemedText type="smallBold">
-            {present
-              ? `✓ Hadir (${me?.checkInAt} WIB)`
-              : leave
-                ? `ℹ️ Status Izin: ${leave.status.toUpperCase()}`
-                : session.status === 'selesai'
-                  ? '✕ Tidak hadir'
-                  : 'Belum Melakukan Presensi'}
+    <>
+      <ScreenScroll>
+        <Pressable
+          onPress={onBack}
+          accessibilityRole="button"
+          accessibilityLabel="Kembali ke daftar sesi"
+          style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}>
+          <ThemedText type="labelLg" themeColor="textSecondary">
+            ← Kembali ke jadwal praktikum
           </ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            Praktikan: {me?.name ?? currentUser.name} ({me?.nim ?? currentUser.nim})
-          </ThemedText>
-        </ThemedView>
-        <ThemedText type="small" themeColor="textSecondary" style={styles.helperText}>{helper}</ThemedText>
-        <ActionButton
-          label={busy ? 'Mencatat…' : present ? '✓ Sudah Presensi' : 'Presensi Sekarang'}
-          onPress={handleCheckIn}
-          disabled={!canCheckIn || busy}
-          tone={canCheckIn ? 'primary' : 'secondary'}
-        />
-        {canRequestLeave && !leave && (
-          <View style={[styles.leavePrompt, { borderTopColor: theme.border }]}>
-            <ThemedText type="small" themeColor="textSecondary">Berhalangan hadir karena sakit atau kendala mendesak?</ThemedText>
-            <ActionButton label="Ajukan Izin Praktikum" onPress={() => setIsLeaveModalVisible(true)} tone="secondary" />
-          </View>
-        )}
-      </ThemedView>
+        </Pressable>
 
-      {leave && (
-        <ThemedView type="backgroundElement" style={[styles.card, { borderColor: theme.border }]}>
+        {feedback ? (
+          <FeedbackBanner {...feedback} onDismiss={() => setFeedback(null)} />
+        ) : null}
+
+        <Card>
           <View style={styles.cardHeader}>
-            <ThemedText type="smallBold" style={styles.sectionTitle}>Pengajuan Izin Sesi Ini</ThemedText>
-            <LeaveStatusBadge status={leave.status} />
+            <View style={styles.cardHeaderText}>
+              <ThemedText type="labelSm" themeColor="onSurfaceSecondary">
+                Mata kuliah praktikum
+              </ThemedText>
+              <ThemedText type="headlineMd" themeColor="onSurface">
+                {session.courseName}
+              </ThemedText>
+            </View>
+            <SessionStatusBadge status={session.status} />
           </View>
-          <DetailRow label="Alasan Izin" value={leave.reason} />
-          <DetailRow label="Diajukan Pada" value={leave.submittedAt} />
-          {leave.decidedBy && (
-            <ThemedView type="surfaceAlt" style={styles.reviewBox}>
-              <ThemedText type="smallBold">Hasil Verifikasi Asisten:</ThemedText>
-              <ThemedText type="small">Diverifikasi oleh {leave.decidedBy} ({leave.decidedAt})</ThemedText>
-              {leave.decisionNote && (
-                <ThemedText type="small" themeColor="textSecondary">Catatan: "{leave.decisionNote}"</ThemedText>
-              )}
-            </ThemedView>
-          )}
-          <AICard category={leave.aiCategory} confidence={leave.aiConfidence} model={leave.aiModel} />
-        </ThemedView>
-      )}
+
+          <View style={[styles.divider, { backgroundColor: theme.border }]} />
+
+          <DetailRow label="Kelompok kelas" value={session.classGroup} />
+          <DetailRow label="Ruangan lab" value={session.room} />
+          <DetailRow label="Jadwal" value={`${session.dayLabel}, ${session.dateLabel}`} />
+          <DetailRow
+            label="Waktu pelaksanaan"
+            value={`${session.startTime}–${session.endTime} WIB`}
+          />
+          <DetailRow label="Asisten penanggung jawab" value={session.asprakName} />
+          {session.openedAt ? (
+            <DetailRow label="Dibuka pada" value={`${session.openedAt} WIB`} />
+          ) : null}
+          {session.closedAt ? (
+            <DetailRow label="Ditutup pada" value={`${session.closedAt} WIB`} />
+          ) : null}
+          {session.closingNote ? (
+            <DetailRow label="Catatan penutupan" value={session.closingNote} />
+          ) : null}
+        </Card>
+
+        <Card>
+          <ThemedText type="titleMd" themeColor="onSurface">
+            Status Kehadiran Anda
+          </ThemedText>
+
+          <View style={[styles.statusBox, { backgroundColor: theme.surfaceAlt }]}>
+            <ThemedText
+              type="labelLg"
+              style={{ color: present ? theme.success : theme.onSurface }}>
+              {statusLabel}
+            </ThemedText>
+            <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
+              {me?.name ?? currentUser.name} ({me?.nim ?? currentUser.nim})
+            </ThemedText>
+          </View>
+
+          <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
+            {helper}
+          </ThemedText>
+
+          <ActionButton
+            label={busy ? 'Mencatat…' : present ? 'Sudah presensi' : 'Presensi sekarang'}
+            onPress={handleCheckIn}
+            disabled={!canCheckIn || busy}
+            tone={canCheckIn ? 'primary' : 'secondary'}
+          />
+
+          {canRequestLeave && !leave ? (
+            <View style={[styles.leavePrompt, { borderTopColor: theme.border }]}>
+              <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
+                Berhalangan hadir karena sakit atau kendala mendesak?
+              </ThemedText>
+              <ActionButton
+                label="Ajukan izin praktikum"
+                onPress={() => setIsLeaveModalVisible(true)}
+                tone="secondary"
+              />
+            </View>
+          ) : null}
+        </Card>
+
+        {leave ? (
+          <Card>
+            <View style={styles.cardHeader}>
+              <ThemedText type="titleMd" themeColor="onSurface">
+                Pengajuan Izin Sesi Ini
+              </ThemedText>
+              <LeaveStatusBadge status={leave.status} />
+            </View>
+            <DetailRow label="Alasan izin" value={leave.reason} />
+            <DetailRow label="Diajukan pada" value={leave.submittedAt} />
+            {leave.decidedBy ? (
+              <View style={[styles.reviewBox, { backgroundColor: theme.surfaceAlt }]}>
+                <ThemedText type="labelSm" themeColor="onSurface">
+                  Hasil verifikasi asisten
+                </ThemedText>
+                <ThemedText type="bodySm" themeColor="onSurface">
+                  Diverifikasi oleh {leave.decidedBy} ({leave.decidedAt})
+                </ThemedText>
+                {leave.decisionNote ? (
+                  <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
+                    Catatan: &ldquo;{leave.decisionNote}&rdquo;
+                  </ThemedText>
+                ) : null}
+              </View>
+            ) : null}
+            <AICard
+              category={leave.aiCategory}
+              confidence={leave.aiConfidence}
+              model={leave.aiModel}
+            />
+          </Card>
+        ) : null}
+      </ScreenScroll>
 
       <LeaveRequestModal
         visible={isLeaveModalVisible}
@@ -172,40 +229,70 @@ export function SessionDetailScreen({ sessionId, onBack }: { sessionId: string; 
         onClose={() => setIsLeaveModalVisible(false)}
         onSuccess={(msg) => setFeedback({ tone: 'success', message: msg })}
       />
-    </ScrollView>
+    </>
   );
 }
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.detailRow}>
-      <ThemedText type="small" themeColor="textSecondary" style={styles.detailLabel}>{label}</ThemedText>
-      <ThemedText type="smallBold" style={styles.detailValue}>{value}</ThemedText>
+      <ThemedText type="bodySm" themeColor="onSurfaceSecondary" style={styles.detailLabel}>
+        {label}
+      </ThemedText>
+      <ThemedText type="bodyMd" themeColor="onSurface" style={styles.detailValue}>
+        {value}
+      </ThemedText>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: Spacing.three },
-  scrollContent: { padding: Spacing.three, gap: Spacing.three },
-  backBtn: { alignSelf: 'flex-start', paddingVertical: Spacing.one },
-  pressed: { opacity: 0.7 },
-  card: { padding: Spacing.three, borderRadius: Spacing.three, borderWidth: 1, gap: Spacing.two },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: Spacing.two },
-  courseTitle: { fontSize: 18, lineHeight: 24, marginTop: Spacing.half },
-  divider: { height: 1, marginVertical: Spacing.half },
-  metaGrid: { gap: Spacing.one + 2 },
-  detailRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: Spacing.two },
-  detailLabel: { fontSize: 13, flex: 1 },
-  detailValue: { fontSize: 13, flex: 1, textAlign: 'right' },
-  sectionTitle: { fontSize: 16 },
-  statusBox: { padding: Spacing.two + 2, borderRadius: Spacing.two, gap: Spacing.half },
-  helperText: { fontSize: 13, lineHeight: 18 },
-  leavePrompt: { marginTop: Spacing.two, borderTopWidth: 1, paddingTop: Spacing.two, gap: Spacing.two },
-  reviewBox: { padding: Spacing.two, borderRadius: Spacing.one, gap: Spacing.half },
-  devBox: { padding: Spacing.two, borderRadius: Spacing.two, borderWidth: 1, borderStyle: 'dashed', gap: Spacing.two, marginTop: Spacing.one },
-  devActions: { flexDirection: 'row', gap: Spacing.two },
-  devBtn: { flex: 1 },
-  titleRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: Spacing.two },
-  titleText: { flexShrink: 1, fontWeight: '600' },
+  backBtn: {
+    alignSelf: 'flex-start',
+    paddingVertical: Spacing.one,
+  },
+  pressed: {
+    opacity: 0.7,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: Spacing.two,
+  },
+  cardHeaderText: {
+    flexShrink: 1,
+    gap: Spacing.half,
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: Spacing.three,
+  },
+  detailLabel: {
+    flexShrink: 0,
+  },
+  detailValue: {
+    flex: 1,
+    textAlign: 'right',
+  },
+  statusBox: {
+    padding: Spacing.three,
+    borderRadius: Radius.md,
+    gap: Spacing.one,
+  },
+  leavePrompt: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: Spacing.three,
+    gap: Spacing.two,
+  },
+  reviewBox: {
+    padding: Spacing.three,
+    borderRadius: Radius.md,
+    gap: Spacing.one,
+  },
 });

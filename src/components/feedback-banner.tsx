@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
 
-import { Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export type FeedbackTone = 'success' | 'error';
@@ -29,11 +29,11 @@ export function FeedbackBanner({ tone, message, onDismiss }: FeedbackBannerProps
         styles.banner,
         {
           backgroundColor: isSuccess ? theme.successBackground : theme.dangerBackground,
-          borderColor: foreground,
+          borderColor: isSuccess ? theme.success : theme.dangerBorder,
         },
       ]}>
       <View style={styles.header}>
-        <ThemedText type="smallBold" style={[styles.title, { color: foreground }]}>
+        <ThemedText type="labelLg" style={[styles.title, { color: foreground }]}>
           {isSuccess ? 'Berhasil' : 'Tidak dapat diproses'}
         </ThemedText>
         <Pressable
@@ -42,12 +42,14 @@ export function FeedbackBanner({ tone, message, onDismiss }: FeedbackBannerProps
           onPress={onDismiss}
           hitSlop={8}
           style={({ pressed }) => pressed && styles.pressed}>
-          <ThemedText type="smallBold" style={{ color: foreground }}>
+          <ThemedText type="labelSm" style={{ color: foreground }}>
             Tutup
           </ThemedText>
         </Pressable>
       </View>
-      <ThemedText type="small">{message}</ThemedText>
+      <ThemedText type="bodySm" themeColor="onSurface">
+        {message}
+      </ThemedText>
     </ThemedView>
   );
 }
@@ -56,7 +58,7 @@ const styles = StyleSheet.create({
   banner: {
     width: '100%',
     padding: Spacing.three,
-    borderRadius: Spacing.three,
+    borderRadius: Radius.lg,
     borderWidth: 1,
     gap: Spacing.one,
   },

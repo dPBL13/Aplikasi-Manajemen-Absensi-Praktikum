@@ -1,5 +1,7 @@
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
+  Animated,
+  Easing,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -9,10 +11,11 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from './themed-text';
 
-import { Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 type BottomSheetModalProps = {
@@ -23,9 +26,15 @@ type BottomSheetModalProps = {
   children: ReactNode;
 };
 
+const SHEET_FADE_IN = 240;
+const SHEET_TRAVEL = 28;
+
 /**
  * Modal yang tampil sebagai bottom sheet di layar sempit dan dialog tengah
  * di layar lebar. Tidak memerlukan dependency tambahan.
+ *
+ * Scrim memudar lembut lewat `animationType="fade"` milik Modal, sementara
+ * sheet naik sedikit saat dibuka — latar tidak tiba-tiba menghitam.
  */
 export function BottomSheetModal({
   visible,
@@ -35,76 +44,112 @@ export function BottomSheetModal({
   children,
 }: BottomSheetModalProps) {
   const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const theme = useTheme();
   const isWide = width >= 720;
+
+  const [opacity] = useState(() => new Animated.Value(0));
+  const [translateY] = useState(() => new Animated.Value(SHEET_TRAVEL));
+
+  useEffect(() => {
+    if (!visible) {
+      return;
+    }
+
+    opacity.setValue(0);
+    translateY.setValue(SHEET_TRAVEL);
+
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: SHEET_FADE_IN,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: SHEET_FADE_IN + 40,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [opacity, translateY, visible]);
+
+  const bottomPadding = isWide ? Spacing.four : Spacing.four + insets.bottom;
 
   return (
     <Modal
       visible={visible}
       transparent
-      animationType={isWide ? 'fade' : 'slide'}
+      animationType="fade"
       onRequestClose={onClose}
       statusBarTranslucent>
       <View style={[styles.backdrop, isWide ? styles.backdropCenter : styles.backdropBottom]}>
-        <Pressable
-          style={[styles.scrim, { backgroundColor: theme.overlay }]}
-          onPress={onClose}
-          accessibilityRole="button"
-          accessibilityLabel="Tutup dialog"
-        />
+        <Animated.View
+          style={[styles.scrim, { backgroundColor: theme.overlay, opacity }]}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel="Tutup dialog"
+          />
+        </Animated.View>
 
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={[styles.sheetWrapper, isWide && styles.sheetWrapperWide]}>
-          <View
-            accessibilityViewIsModal
-            style={[
-              styles.sheet,
-              isWide ? styles.sheetWide : styles.sheetCompact,
-              {
-                backgroundColor: theme.surfaceAlt,
-                borderColor: theme.border,
-                maxHeight: height * (isWide ? 0.82 : 0.9),
-              },
-            ]}>
-            {!isWide ? <View style={[styles.handle, { backgroundColor: theme.border }]} /> : null}
+          <Animated.View style={[styles.sheetAnimated, { transform: [{ translateY }] }]}>
+            <View
+              accessibilityViewIsModal
+              style={[
+                styles.sheet,
+                isWide ? styles.sheetWide : styles.sheetCompact,
+                {
+                  backgroundColor: theme.backgroundElement,
+                  borderColor: theme.border,
+                  maxHeight: height * (isWide ? 0.82 : 0.9),
+                  paddingBottom: bottomPadding,
+                },
+              ]}>
+              {!isWide ? <View style={[styles.handle, { backgroundColor: theme.border }]} /> : null}
 
-            <View style={styles.header}>
-              <View style={styles.headerText}>
-                <ThemedText type="default" style={styles.title}>
-                  {title}
-                </ThemedText>
-                {description ? (
-                  <ThemedText type="small" themeColor="textSecondary">
-                    {description}
+              <View style={styles.header}>
+                <View style={styles.headerText}>
+                  <ThemedText type="titleMd" themeColor="onSurface" style={styles.title}>
+                    {title}
                   </ThemedText>
-                ) : null}
+                  {description ? (
+                    <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
+                      {description}
+                    </ThemedText>
+                  ) : null}
+                </View>
+
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Tutup dialog"
+                  onPress={onClose}
+                  hitSlop={8}
+                  style={({ pressed }) => [
+                    styles.closeButton,
+                    { backgroundColor: theme.surfaceAlt },
+                    pressed && styles.pressed,
+                  ]}>
+                  <ThemedText type="labelSm" themeColor="onSurface">
+                    Tutup
+                  </ThemedText>
+                </Pressable>
               </View>
 
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Tutup dialog"
-                onPress={onClose}
-                hitSlop={8}
-                style={({ pressed }) => [
-                  styles.closeButton,
-                  { backgroundColor: theme.backgroundSelected },
-                  pressed && styles.pressed,
-                ]}>
-                <ThemedText type="smallBold" themeColor="textSecondary">
-                  Tutup
-                </ThemedText>
-              </Pressable>
+              <ScrollView
+                style={styles.bodyScroll}
+                contentContainerStyle={styles.body}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}>
+                {children}
+              </ScrollView>
             </View>
-
-            <ScrollView
-              style={styles.bodyScroll}
-              contentContainerStyle={styles.body}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}>
-              {children}
-            </ScrollView>
-          </View>
+          </Animated.View>
         </KeyboardAvoidingView>
       </View>
     </Modal>
@@ -139,27 +184,29 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 560,
   },
+  sheetAnimated: {
+    width: '100%',
+  },
   sheet: {
     width: '100%',
     gap: Spacing.three,
     padding: Spacing.four,
   },
   sheetCompact: {
-    borderTopLeftRadius: Spacing.four,
-    borderTopRightRadius: Spacing.four,
+    borderTopLeftRadius: Radius.xl,
+    borderTopRightRadius: Radius.xl,
     borderTopWidth: 1,
     borderLeftWidth: 1,
     borderRightWidth: 1,
-    paddingBottom: Spacing.five,
   },
   sheetWide: {
-    borderRadius: Spacing.four,
+    borderRadius: Radius.xl,
     borderWidth: 1,
   },
   handle: {
     width: 44,
     height: 4,
-    borderRadius: 999,
+    borderRadius: Radius.full,
     alignSelf: 'center',
   },
   header: {
@@ -173,12 +220,12 @@ const styles = StyleSheet.create({
     gap: Spacing.one,
   },
   title: {
-    fontWeight: 700,
+    flexShrink: 1,
   },
   closeButton: {
     paddingVertical: Spacing.one,
     paddingHorizontal: Spacing.two,
-    borderRadius: Spacing.two,
+    borderRadius: Radius.sm,
   },
   bodyScroll: {
     flexGrow: 0,

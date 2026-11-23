@@ -1,57 +1,64 @@
-import { Platform, StyleSheet, Text, type TextProps } from 'react-native';
+import { StyleSheet, Text, type TextProps } from 'react-native';
 
-import { Fonts, Palette, ThemeColor } from '@/constants/theme';
+import { Typography, type ThemeColor } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
+export type ThemedTextType =
+  | 'default'
+  | 'title'
+  | 'small'
+  | 'smallBold'
+  | 'subtitle'
+  | 'link'
+  | 'linkPrimary'
+  | 'code'
+  | 'display'
+  | 'displayMobile'
+  | 'headlineLg'
+  | 'headlineMd'
+  | 'titleMd'
+  | 'bodyMd'
+  | 'bodySm'
+  | 'labelLg'
+  | 'labelSm'
+  | 'monoSm';
+
 export type ThemedTextProps = TextProps & {
-  type?: 'default' | 'title' | 'small' | 'smallBold' | 'subtitle' | 'link' | 'linkPrimary' | 'code';
+  type?: ThemedTextType;
   themeColor?: ThemeColor;
 };
 
 export function ThemedText({ style, type = 'default', themeColor, ...rest }: ThemedTextProps) {
   const theme = useTheme();
+  const color = themeColor
+    ? theme[themeColor]
+    : type === 'linkPrimary'
+      ? theme.link
+      : theme.text;
 
-  return <Text style={[{ color: theme[themeColor ?? 'text'] }, styles[type], style]} {...rest} />;
+  return <Text style={[{ color }, styles[type], style]} {...rest} />;
 }
 
 const styles = StyleSheet.create({
-  small: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: 500,
-  },
-  smallBold: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: 700,
-  },
-  default: {
-    fontSize: 16,
-    lineHeight: 24,
-    fontWeight: 500,
-  },
-  title: {
-    fontSize: 48,
-    fontWeight: 600,
-    lineHeight: 52,
-  },
-  subtitle: {
-    fontSize: 32,
-    lineHeight: 44,
-    fontWeight: 600,
-  },
-  link: {
-    lineHeight: 30,
-    fontSize: 14,
-  },
-  linkPrimary: {
-    lineHeight: 30,
-    fontSize: 14,
-    color: Palette.link,
-  },
-  code: {
-    fontFamily: Fonts.mono,
-    fontWeight: Platform.select({ android: 700 }) ?? 500,
-    fontSize: 12,
-  },
+  /** Legacy aliases kept so existing screens keep rendering. */
+  default: Typography.bodyMd,
+  small: Typography.bodySm,
+  smallBold: Typography.labelLg,
+  subtitle: Typography.headlineLg,
+  title: Typography.displayMd,
+  link: Typography.bodyMd,
+  linkPrimary: Typography.bodyMd,
+  code: Typography.monoSm,
+
+  /** New design-system names. */
+  display: Typography.displayMd,
+  displayMobile: Typography.displayMdMobile,
+  headlineLg: Typography.headlineLg,
+  headlineMd: Typography.headlineMd,
+  titleMd: Typography.titleMd,
+  bodyMd: Typography.bodyMd,
+  bodySm: Typography.bodySm,
+  labelLg: Typography.labelLg,
+  labelSm: Typography.labelSm,
+  monoSm: Typography.monoSm,
 });

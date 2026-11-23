@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
+import { Card } from '@/components/card';
 import { EmptyState } from '@/components/empty-state';
 import { ScreenScroll } from '@/components/screen-scroll';
 import { ThemedText } from '@/components/themed-text';
@@ -28,22 +29,24 @@ export default function NewSessionScreen() {
   return (
     <ScreenScroll>
       <View style={styles.heading}>
-        <ThemedText type="subtitle" style={styles.title}>
+        <ThemedText type="headlineLg" themeColor="text">
           Jadwal Baru
         </ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">
+        <ThemedText type="bodyMd" themeColor="textSecondary">
           Sesi baru selalu dibuat dengan status “Belum Dibuka”.
         </ThemedText>
       </View>
 
-      <SessionForm
-        classes={data.classes}
-        initial={emptySessionInput(data.classes[0].id)}
-        submitLabel="Simpan jadwal"
-        onSubmit={(input) => dataService.createSession(input)}
-        onSuccess={() => router.back()}
-        onCancel={() => router.back()}
-      />
+      <Card>
+        <SessionForm
+          classes={data.classes}
+          initial={emptySessionInput(data.classes[0].id)}
+          submitLabel="Simpan jadwal"
+          onSubmit={(input) => dataService.createSession(input)}
+          onSuccess={() => router.back()}
+          onCancel={() => router.back()}
+        />
+      </Card>
     </ScreenScroll>
   );
 }
@@ -51,9 +54,5 @@ export default function NewSessionScreen() {
 const styles = StyleSheet.create({
   heading: {
     gap: Spacing.one,
-  },
-  title: {
-    fontSize: 24,
-    lineHeight: 30,
   },
 });

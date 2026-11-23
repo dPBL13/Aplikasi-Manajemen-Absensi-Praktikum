@@ -4,13 +4,13 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ActionButton } from '@/components/action-button';
 import { BottomSheetModal } from '@/components/bottom-sheet-modal';
+import { Card } from '@/components/card';
 import { FeedbackBanner, type FeedbackMessage } from '@/components/feedback-banner';
 import { FormField } from '@/components/form-field';
 import { InfoRow } from '@/components/info-row';
 import { ScreenScroll } from '@/components/screen-scroll';
 import { SessionStatusBadge } from '@/components/status-badge';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { ClassForm } from '@/features/asprak/class-form';
 import { useTheme } from '@/hooks/use-theme';
@@ -49,13 +49,15 @@ export default function ClassDetailScreen() {
   if (!practicumClass) {
     return (
       <ScreenScroll>
-        <ThemedView type="backgroundElement" style={styles.card}>
-          <ThemedText type="subtitle">Kelas tidak ditemukan</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
+        <Card>
+          <ThemedText type="headlineMd" themeColor="onSurface">
+            Kelas tidak ditemukan
+          </ThemedText>
+          <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
             Kelas sudah dihapus atau tidak tersedia.
           </ThemedText>
           <ActionButton label="Kembali" tone="secondary" onPress={() => router.back()} />
-        </ThemedView>
+        </Card>
       </ScreenScroll>
     );
   }
@@ -118,12 +120,12 @@ export default function ClassDetailScreen() {
       <Stack.Screen options={{ title: practicumClass.courseName }} />
 
       <ScreenScroll>
-        <ThemedView type="backgroundElement" style={styles.card}>
+        <Card>
           <View style={styles.titleRow}>
-            <ThemedText type="default" style={styles.titleText}>
+            <ThemedText type="headlineMd" themeColor="onSurface" style={styles.titleText}>
               {practicumClass.courseName}
             </ThemedText>
-            <ThemedText type="code" themeColor="textSecondary">
+            <ThemedText type="monoSm" themeColor="onSurfaceSecondary">
               {practicumClass.code}
             </ThemedText>
           </View>
@@ -135,18 +137,20 @@ export default function ClassDetailScreen() {
           <InfoRow label="Sesi" value={`${sessions.length} sesi`} />
           {practicumClass.description ? (
             <View style={[styles.noteBlock, { borderTopColor: theme.border }]}>
-              <ThemedText type="smallBold">Deskripsi</ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
+              <ThemedText type="labelSm" themeColor="onSurface">
+                Deskripsi
+              </ThemedText>
+              <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
                 {practicumClass.description}
               </ThemedText>
             </View>
           ) : null}
-        </ThemedView>
+        </Card>
 
         {feedback ? <FeedbackBanner {...feedback} onDismiss={() => setFeedback(null)} /> : null}
 
-        <ThemedView type="backgroundElement" style={styles.card}>
-          <ThemedText type="default" style={styles.sectionTitle}>
+        <Card>
+          <ThemedText type="titleMd" themeColor="onSurface">
             {isEditing ? 'Ubah Informasi Kelas' : 'Aksi Kelas'}
           </ThemedText>
 
@@ -177,20 +181,20 @@ export default function ClassDetailScreen() {
               <ActionButton label="Hapus Kelas" tone="danger" onPress={() => setIsDeleting(true)} />
             </>
           )}
-        </ThemedView>
+        </Card>
 
-        <ThemedView type="backgroundElement" style={styles.card}>
+        <Card>
           <View style={styles.titleRow}>
-            <ThemedText type="default" style={styles.sectionTitle}>
+            <ThemedText type="titleMd" themeColor="onSurface">
               Peserta Praktikum
             </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
+            <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
               {practicumClass.participants.length} orang
             </ThemedText>
           </View>
 
           {practicumClass.participants.length === 0 ? (
-            <ThemedText type="small" themeColor="textSecondary">
+            <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
               Belum ada peserta. Tambahkan peserta di bawah.
             </ThemedText>
           ) : (
@@ -205,8 +209,10 @@ export default function ClassDetailScreen() {
                   },
                 ]}>
                 <View style={styles.participantInfo}>
-                  <ThemedText type="small">{participant.name}</ThemedText>
-                  <ThemedText type="code" themeColor="textSecondary">
+                  <ThemedText type="bodyMd" themeColor="onSurface">
+                    {participant.name}
+                  </ThemedText>
+                  <ThemedText type="monoSm" themeColor="onSurfaceSecondary">
                     {participant.nim}
                   </ThemedText>
                 </View>
@@ -216,7 +222,7 @@ export default function ClassDetailScreen() {
                   onPress={() => setParticipantToRemove(participant)}
                   hitSlop={8}
                   style={({ pressed }) => pressed && styles.pressed}>
-                  <ThemedText type="smallBold" style={{ color: theme.danger }}>
+                  <ThemedText type="labelLg" style={{ color: theme.danger }}>
                     Hapus
                   </ThemedText>
                 </Pressable>
@@ -225,7 +231,9 @@ export default function ClassDetailScreen() {
           )}
 
           <View style={[styles.addForm, { borderTopColor: theme.border }]}>
-            <ThemedText type="smallBold">Tambah peserta</ThemedText>
+            <ThemedText type="labelSm" themeColor="onSurface">
+              Tambah peserta
+            </ThemedText>
             <FormField
               label="Nama peserta"
               value={newName}
@@ -254,20 +262,20 @@ export default function ClassDetailScreen() {
               disabled={busy}
             />
           </View>
-        </ThemedView>
+        </Card>
 
-        <ThemedView type="backgroundElement" style={styles.card}>
+        <Card>
           <View style={styles.titleRow}>
-            <ThemedText type="default" style={styles.sectionTitle}>
+            <ThemedText type="titleMd" themeColor="onSurface">
               Sesi Kelas Ini
             </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
+            <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
               {sessions.length} sesi
             </ThemedText>
           </View>
 
           {sessions.length === 0 ? (
-            <ThemedText type="small" themeColor="textSecondary">
+            <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
               Belum ada sesi untuk kelas ini.
             </ThemedText>
           ) : (
@@ -281,10 +289,10 @@ export default function ClassDetailScreen() {
                 }
                 style={({ pressed }) => [styles.sessionRow, pressed && styles.pressed]}>
                 <View style={styles.participantInfo}>
-                  <ThemedText type="small">
+                  <ThemedText type="bodyMd" themeColor="onSurface">
                     {session.dayLabel}, {session.dateLabel}
                   </ThemedText>
-                  <ThemedText type="code" themeColor="textSecondary">
+                  <ThemedText type="monoSm" themeColor="onSurfaceSecondary">
                     {session.startTime}–{session.endTime} · {session.room}
                   </ThemedText>
                 </View>
@@ -292,7 +300,7 @@ export default function ClassDetailScreen() {
               </Pressable>
             ))
           )}
-        </ThemedView>
+        </Card>
       </ScreenScroll>
 
       <BottomSheetModal
@@ -351,12 +359,6 @@ export default function ClassDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  card: {
-    width: '100%',
-    padding: Spacing.three,
-    borderRadius: Spacing.three,
-    gap: Spacing.two,
-  },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -365,13 +367,8 @@ const styles = StyleSheet.create({
   },
   titleText: {
     flexShrink: 1,
-    fontWeight: 600,
-  },
-  sectionTitle: {
-    fontWeight: 600,
   },
   noteBlock: {
-    marginTop: Spacing.one,
     paddingTop: Spacing.two,
     borderTopWidth: StyleSheet.hairlineWidth,
     gap: Spacing.one,
@@ -395,7 +392,6 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   addForm: {
-    marginTop: Spacing.two,
     paddingTop: Spacing.three,
     borderTopWidth: StyleSheet.hairlineWidth,
     gap: Spacing.two,

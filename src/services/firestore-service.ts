@@ -1,9 +1,10 @@
+import { onAuthStateChanged } from '@react-native-firebase/auth';
 import {
   collection,
-  deleteDoc,
   doc,
   getDocs,
   onSnapshot,
+  runTransaction,
   setDoc,
   updateDoc,
   writeBatch,
@@ -20,7 +21,7 @@ import type {
   SessionParticipant,
 } from '@/types/domain';
 import { formatClock } from '@/utils/format-clock';
-import { firestore } from './firebase/config';
+import { firebaseAuth, firestore } from './firebase/config';
 import { classifyLeaveReason } from './gemini-service';
 import type {
   ClassInput,
@@ -40,6 +41,22 @@ import {
 
 const FAIL = (reason: string): MutationResult => ({ ok: false, reason });
 const SUCCESS: MutationResult = { ok: true };
+
+/**
+ * Firestore menolak semua penulisan tanpa autentikasi. Tanpa guard ini,
+ * SDK tetap menampilkan perubahan dari cache lokal seolah-olah berhasil,
+ * padahal dokumen tidak pernah sampai ke server. Kembalikan pesan yang jelas
+ * daripada memberi ilusi "tersimpan".
+ */
+function requireAuth(): MutationResult | null {
+  if (!firebaseAuth.currentUser) {
+    return FAIL(
+      'Anda belum masuk. Silakan login terlebih dahulu agar perubahan tersimpan ke server.',
+    );
+  }
+
+  return null;
+}
 
 function generateId(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
@@ -66,6 +83,79 @@ function notifyListeners() {
 
 let isSubscribed = false;
 let unsubscribers: (() => void)[] = [];
+let hasLoadedInitialData = false;
+let usingSeedFallback = false;
+let seedInFlight = false;
+
+/**
+ * Dipakai ketika Firestore menolak pembacaan (mis. aturan keamanan belum
+ * diterapkan atau perangkat offline). Aplikasi tetap dapat dibuka dengan data
+ * contoh lokal; setiap penulisan tetap akan gagal dan dilaporkan lewat banner.
+ */
+function loadSeedFallback(reason: unknown) {
+  if (usingSeedFallback || hasLoadedInitialData) return;
+
+  usingSeedFallback = true;
+  console.warn(
+    '[firestore-service] Gagal membaca Firestore. Memakai data contoh lokal sementara.',
+    reason,
+  );
+
+  cachedData = {
+    classes: seedClasses,
+    sessions: seedSessions,
+    permits: seedPermits,
+  };
+  notifyListeners();
+}
+
+async function bootstrapFirestore() {
+  if (seedInFlight) return;
+  seedInFlight = true;
+
+  try {
+    let snapshot;
+
+    try {
+      snapshot = await getDocs(collection(firestore, 'classes'));
+    } catch (err) {
+      loadSeedFallback(err);
+      return;
+    }
+
+    hasLoadedInitialData = true;
+
+    if (!snapshot.empty) return;
+
+    // Seeding membutuhkan user terautentikasi (aturan Firestore menolak write
+    // anonim). Jangan mencoba menulis sebelum login.
+    if (!firebaseAuth.currentUser) {
+      console.log('[firestore-service] Lewati seeding: pengguna belum masuk.');
+      return;
+    }
+
+    // Cek apakah data awal Firestore masih kosong, jika ya isi dengan SEED_DATA
+    console.log('[firestore-service] Firestore masih kosong, memuat data awal (seeding)...');
+
+    try {
+      const batch = writeBatch(firestore);
+      seedClasses.forEach((cls: PracticumClass) => {
+        batch.set(doc(firestore, 'classes', cls.id), cls);
+      });
+      seedSessions.forEach((ses: PracticumSession) => {
+        batch.set(doc(firestore, 'sessions', ses.id), ses);
+      });
+      seedPermits.forEach((per: Permit) => {
+        batch.set(doc(firestore, 'permits', per.id), per);
+      });
+      await batch.commit();
+    } catch (err) {
+      console.warn('[firestore-service] Gagal seeding data awal:', err);
+    }
+  } finally {
+    seedInFlight = false;
+  }
+}
 
 /**
  * Menginisialisasi listener Firestore untuk koleksi classes, sessions, dan permits.
@@ -78,59 +168,60 @@ function initFirestoreSync() {
   const sessionsRef = collection(firestore, 'sessions');
   const permitsRef = collection(firestore, 'permits');
 
-  // Cek apakah data awal Firestore masih kosong, jika ya isi dengan SEED_DATA
-  getDocs(classesRef).then(async (snap) => {
-    if (snap.empty) {
-      console.log('[firestore-service] Firestore masih kosong, memuat data awal (seeding)...');
-      try {
-        const batch = writeBatch(firestore);
-        seedClasses.forEach((cls: PracticumClass) => {
-          batch.set(doc(firestore, 'classes', cls.id), cls);
-        });
-        seedSessions.forEach((ses: PracticumSession) => {
-          batch.set(doc(firestore, 'sessions', ses.id), ses);
-        });
-        seedPermits.forEach((per: Permit) => {
-          batch.set(doc(firestore, 'permits', per.id), per);
-        });
-        await batch.commit();
-      } catch (err) {
-        console.warn('[firestore-service] Gagal seeding data awal:', err);
-      }
+  void bootstrapFirestore();
+
+  // Setelah login (mis. dari mode demo), coba seeding lagi bila Firestore
+  // masih kosong. Tanpa ini, seeding pertama yang dilewati karena belum
+  // terautentikasi tidak akan pernah diulang.
+  const unsubAuth = onAuthStateChanged(firebaseAuth, (user) => {
+    if (user) {
+      void bootstrapFirestore();
     }
   });
 
   const unsubClasses = onSnapshot(
     classesRef,
     (snap) => {
-      const classes = snap.docs.map((d) => d.data() as PracticumClass);
+      hasLoadedInitialData = true;
+      const classes = snap.docs.map((d) => ({ ...(d.data() as PracticumClass), id: d.id }));
       cachedData = { ...cachedData, classes };
       notifyListeners();
     },
-    (err) => console.warn('[firestore-service] Listener classes error:', err)
+    (err) => {
+      console.warn('[firestore-service] Listener classes error:', err);
+      loadSeedFallback(err);
+    }
   );
 
   const unsubSessions = onSnapshot(
     sessionsRef,
     (snap) => {
-      const sessions = snap.docs.map((d) => d.data() as PracticumSession);
+      hasLoadedInitialData = true;
+      const sessions = snap.docs.map((d) => ({ ...(d.data() as PracticumSession), id: d.id }));
       cachedData = { ...cachedData, sessions };
       notifyListeners();
     },
-    (err) => console.warn('[firestore-service] Listener sessions error:', err)
+    (err) => {
+      console.warn('[firestore-service] Listener sessions error:', err);
+      loadSeedFallback(err);
+    }
   );
 
   const unsubPermits = onSnapshot(
     permitsRef,
     (snap) => {
-      const permits = snap.docs.map((d) => d.data() as Permit);
+      hasLoadedInitialData = true;
+      const permits = snap.docs.map((d) => ({ ...(d.data() as Permit), id: d.id }));
       cachedData = { ...cachedData, permits };
       notifyListeners();
     },
-    (err) => console.warn('[firestore-service] Listener permits error:', err)
+    (err) => {
+      console.warn('[firestore-service] Listener permits error:', err);
+      loadSeedFallback(err);
+    }
   );
 
-  unsubscribers = [unsubClasses, unsubSessions, unsubPermits];
+  unsubscribers = [unsubClasses, unsubSessions, unsubPermits, unsubAuth];
 }
 
 export const firestoreDataService: DataService = {
@@ -154,6 +245,9 @@ export const firestoreDataService: DataService = {
 
   // FR-05 — kelas praktikum
   async createClass(input: ClassInput): Promise<MutationResult & { id?: string }> {
+    const authError = requireAuth();
+    if (authError) return authError;
+
     const errors = validateClassInput(input);
     if (hasErrors(errors)) {
       return FAIL(Object.values(errors)[0]);
@@ -181,6 +275,9 @@ export const firestoreDataService: DataService = {
   },
 
   async updateClass(id: string, input: ClassInput): Promise<MutationResult> {
+    const authError = requireAuth();
+    if (authError) return authError;
+
     const existing = cachedData.classes.find((c) => c.id === id);
     if (!existing) return FAIL('Kelas tidak ditemukan.');
 
@@ -216,6 +313,9 @@ export const firestoreDataService: DataService = {
   },
 
   async deleteClass(id: string): Promise<MutationResult> {
+    const authError = requireAuth();
+    if (authError) return authError;
+
     const existing = cachedData.classes.find((c) => c.id === id);
     if (!existing) return FAIL('Kelas tidak ditemukan.');
 
@@ -240,41 +340,63 @@ export const firestoreDataService: DataService = {
 
   // FR-06 — peserta kelas
   async addParticipant(classId: string, input: ParticipantInput): Promise<MutationResult> {
-    const targetClass = cachedData.classes.find((c) => c.id === classId);
-    if (!targetClass) return FAIL('Kelas tidak ditemukan.');
+    const authError = requireAuth();
+    if (authError) return authError;
 
     const errors = validateParticipantInput(input);
     if (hasErrors(errors)) return FAIL(Object.values(errors)[0]);
 
     const cleanNim = input.nim.trim();
-    if (targetClass.participants.some((p) => p.nim === cleanNim)) {
-      return FAIL('Praktikan dengan NIM tersebut sudah terdaftar di kelas ini.');
-    }
-
     const newParticipant: Participant = {
       id: generateId('par'),
       classId,
       name: input.name.trim(),
       nim: cleanNim,
     };
+    const sessionIds = cachedData.sessions
+      .filter((session) => session.classId === classId)
+      .map((session) => session.id);
 
     try {
-      const updatedParticipants = [...targetClass.participants, newParticipant];
-      await updateDoc(doc(firestore, 'classes', classId), {
-        participants: updatedParticipants,
-      });
+      // Transaksi menjaga roster kelas dan salinan peserta di tiap sesi tetap
+      // konsisten walau dua perangkat menambah peserta bersamaan.
+      await runTransaction(firestore, async (transaction) => {
+        const classRef = doc(firestore, 'classes', classId);
+        const classSnap = await transaction.get(classRef);
+        if (!classSnap.exists()) {
+          throw new Error('Kelas tidak ditemukan.');
+        }
 
-      // Tambahkan peserta ke sesi yang belum selesai
-      const batch = writeBatch(firestore);
-      const openOrUpcomingSessions = cachedData.sessions.filter(
-        (s) => s.classId === classId && s.status !== 'selesai'
-      );
-      openOrUpcomingSessions.forEach((s) => {
-        batch.update(doc(firestore, 'sessions', s.id), {
-          participants: [...s.participants, { ...newParticipant }],
+        const targetClass = classSnap.data() as PracticumClass;
+        if (targetClass.participants.some((p) => p.nim === cleanNim)) {
+          throw new Error('Praktikan dengan NIM tersebut sudah terdaftar di kelas ini.');
+        }
+
+        // Semua read harus selesai sebelum write pertama.
+        const sessionSnaps = [];
+        for (const sessionId of sessionIds) {
+          sessionSnaps.push(await transaction.get(doc(firestore, 'sessions', sessionId)));
+        }
+
+        transaction.update(classRef, {
+          participants: [...targetClass.participants, newParticipant],
+        });
+
+        sessionSnaps.forEach((snap) => {
+          if (!snap.exists()) {
+            return;
+          }
+
+          const session = snap.data() as PracticumSession;
+          if (session.participants.some((p) => p.id === newParticipant.id)) {
+            return;
+          }
+
+          transaction.update(snap.ref, {
+            participants: [...session.participants, { ...newParticipant }],
+          });
         });
       });
-      await batch.commit();
 
       return SUCCESS;
     } catch (err: any) {
@@ -283,26 +405,69 @@ export const firestoreDataService: DataService = {
   },
 
   async removeParticipant(classId: string, participantId: string): Promise<MutationResult> {
-    const targetClass = cachedData.classes.find((c) => c.id === classId);
-    if (!targetClass) return FAIL('Kelas tidak ditemukan.');
+    const authError = requireAuth();
+    if (authError) return authError;
+
+    const sessionIds = cachedData.sessions
+      .filter((session) => session.classId === classId)
+      .map((session) => session.id);
+    const knownPermitIds = cachedData.permits
+      .filter((permit) => permit.participantId === participantId)
+      .map((permit) => permit.id);
 
     try {
-      const updatedParticipants = targetClass.participants.filter((p) => p.id !== participantId);
-      await updateDoc(doc(firestore, 'classes', classId), {
-        participants: updatedParticipants,
-      });
+      await runTransaction(firestore, async (transaction) => {
+        const classRef = doc(firestore, 'classes', classId);
+        const classSnap = await transaction.get(classRef);
+        if (!classSnap.exists()) {
+          throw new Error('Kelas tidak ditemukan.');
+        }
 
-      // Hapus dari sesi yang belum selesai
-      const batch = writeBatch(firestore);
-      const activeSessions = cachedData.sessions.filter(
-        (s) => s.classId === classId && s.status !== 'selesai'
-      );
-      activeSessions.forEach((s) => {
-        batch.update(doc(firestore, 'sessions', s.id), {
-          participants: s.participants.filter((p) => p.id !== participantId),
+        const targetClass = classSnap.data() as PracticumClass;
+        const participant = targetClass.participants.find((p) => p.id === participantId);
+        if (!participant) {
+          throw new Error('Peserta tidak ditemukan pada kelas ini.');
+        }
+
+        const permitIds = new Set([
+          ...knownPermitIds,
+          ...cachedData.permits
+            .filter((permit) => permit.nim === participant.nim)
+            .map((permit) => permit.id),
+        ]);
+
+        // Semua read harus selesai sebelum write pertama.
+        const sessionSnaps = [];
+        for (const sessionId of sessionIds) {
+          sessionSnaps.push(await transaction.get(doc(firestore, 'sessions', sessionId)));
+        }
+
+        const permitSnaps = [];
+        for (const permitId of permitIds) {
+          permitSnaps.push(await transaction.get(doc(firestore, 'permits', permitId)));
+        }
+
+        transaction.update(classRef, {
+          participants: targetClass.participants.filter((p) => p.id !== participantId),
+        });
+
+        sessionSnaps.forEach((snap) => {
+          if (!snap.exists()) {
+            return;
+          }
+
+          const session = snap.data() as PracticumSession;
+          transaction.update(snap.ref, {
+            participants: session.participants.filter((p) => p.id !== participantId),
+          });
+        });
+
+        permitSnaps.forEach((snap) => {
+          if (snap.exists()) {
+            transaction.delete(snap.ref);
+          }
         });
       });
-      await batch.commit();
 
       return SUCCESS;
     } catch (err: any) {
@@ -312,6 +477,9 @@ export const firestoreDataService: DataService = {
 
   // FR-07 / FR-08 — jadwal & sesi
   async createSession(input: SessionInput): Promise<MutationResult & { id?: string }> {
+    const authError = requireAuth();
+    if (authError) return authError;
+
     const targetClass = cachedData.classes.find((c) => c.id === input.classId);
     if (!targetClass) return FAIL('Kelas tidak ditemukan.');
 
@@ -347,6 +515,9 @@ export const firestoreDataService: DataService = {
   },
 
   async updateSession(id: string, input: SessionInput): Promise<MutationResult> {
+    const authError = requireAuth();
+    if (authError) return authError;
+
     const existing = cachedData.sessions.find((s) => s.id === id);
     if (!existing) return FAIL('Sesi tidak ditemukan.');
 
@@ -374,6 +545,9 @@ export const firestoreDataService: DataService = {
   },
 
   async deleteSession(id: string): Promise<MutationResult> {
+    const authError = requireAuth();
+    if (authError) return authError;
+
     const existing = cachedData.sessions.find((s) => s.id === id);
     if (!existing) return FAIL('Sesi tidak ditemukan.');
 
@@ -382,7 +556,15 @@ export const firestoreDataService: DataService = {
     }
 
     try {
-      await deleteDoc(doc(firestore, 'sessions', id));
+      const batch = writeBatch(firestore);
+      batch.delete(doc(firestore, 'sessions', id));
+
+      // Cascade: hapus pengajuan izin yang menempel pada sesi ini.
+      cachedData.permits
+        .filter((permit) => permit.sessionId === id)
+        .forEach((permit) => batch.delete(doc(firestore, 'permits', permit.id)));
+
+      await batch.commit();
       return SUCCESS;
     } catch (err: any) {
       return FAIL(err?.message || 'Gagal menghapus sesi.');
@@ -390,17 +572,31 @@ export const firestoreDataService: DataService = {
   },
 
   async openSession(id: string): Promise<MutationResult> {
-    const existing = cachedData.sessions.find((s) => s.id === id);
-    if (!existing) return FAIL('Sesi tidak ditemukan.');
-
-    if (existing.status === 'berlangsung') return FAIL('Sesi sudah dalam status berlangsung.');
-    if (existing.status === 'selesai') return FAIL('Sesi yang sudah selesai tidak dapat dibuka kembali.');
+    const authError = requireAuth();
+    if (authError) return authError;
 
     try {
-      await updateDoc(doc(firestore, 'sessions', id), {
-        status: 'berlangsung',
-        openedAt: formatClock(),
+      await runTransaction(firestore, async (transaction) => {
+        const sessionRef = doc(firestore, 'sessions', id);
+        const snap = await transaction.get(sessionRef);
+        if (!snap.exists()) {
+          throw new Error('Sesi tidak ditemukan.');
+        }
+
+        const session = snap.data() as PracticumSession;
+        if (session.status === 'berlangsung') {
+          throw new Error('Sesi sudah dalam status berlangsung.');
+        }
+        if (session.status === 'selesai') {
+          throw new Error('Sesi yang sudah selesai tidak dapat dibuka kembali.');
+        }
+
+        transaction.update(sessionRef, {
+          status: 'berlangsung',
+          openedAt: formatClock(),
+        });
       });
+
       return SUCCESS;
     } catch (err: any) {
       return FAIL(err?.message || 'Gagal membuka sesi.');
@@ -408,18 +604,32 @@ export const firestoreDataService: DataService = {
   },
 
   async closeSession(id: string, note?: string): Promise<MutationResult> {
-    const existing = cachedData.sessions.find((s) => s.id === id);
-    if (!existing) return FAIL('Sesi tidak ditemukan.');
-
-    if (existing.status === 'belum-dibuka') return FAIL('Sesi belum pernah dibuka.');
-    if (existing.status === 'selesai') return FAIL('Sesi sudah selesai.');
+    const authError = requireAuth();
+    if (authError) return authError;
 
     try {
-      await updateDoc(doc(firestore, 'sessions', id), {
-        status: 'selesai',
-        closedAt: formatClock(),
-        closingNote: note?.trim() || undefined,
+      await runTransaction(firestore, async (transaction) => {
+        const sessionRef = doc(firestore, 'sessions', id);
+        const snap = await transaction.get(sessionRef);
+        if (!snap.exists()) {
+          throw new Error('Sesi tidak ditemukan.');
+        }
+
+        const session = snap.data() as PracticumSession;
+        if (session.status === 'belum-dibuka') {
+          throw new Error('Sesi belum pernah dibuka.');
+        }
+        if (session.status === 'selesai') {
+          throw new Error('Sesi sudah selesai.');
+        }
+
+        transaction.update(sessionRef, {
+          status: 'selesai',
+          closedAt: formatClock(),
+          closingNote: note?.trim() || undefined,
+        });
       });
+
       return SUCCESS;
     } catch (err: any) {
       return FAIL(err?.message || 'Gagal menutup sesi.');
@@ -428,35 +638,46 @@ export const firestoreDataService: DataService = {
 
   // FR-10 / FR-11 — presensi praktikan
   async checkIn(sessionId: string, participantId: string): Promise<MutationResult> {
-    const existing = cachedData.sessions.find((s) => s.id === sessionId);
-    if (!existing) return FAIL('Sesi tidak ditemukan.');
-
-    if (existing.status === 'belum-dibuka') {
-      return FAIL('Sesi belum dibuka oleh asisten praktikum.');
-    }
-    if (existing.status === 'selesai') {
-      return FAIL('Sesi sudah ditutup. Presensi tidak lagi diterima.');
-    }
-
-    const participantIndex = existing.participants.findIndex((p) => p.id === participantId);
-    if (participantIndex === -1) {
-      return FAIL('Anda tidak terdaftar sebagai peserta pada sesi ini.');
-    }
-
-    const participant = existing.participants[participantIndex];
-    if (participant.checkInAt) {
-      return FAIL(`Anda sudah tercatat hadir pada pukul ${participant.checkInAt}.`);
-    }
+    const authError = requireAuth();
+    if (authError) return authError;
 
     try {
-      const updatedParticipants = [...existing.participants];
-      updatedParticipants[participantIndex] = {
-        ...participant,
-        checkInAt: formatClock(),
-      };
+      // Transaksi membaca ulang dokumen sesi, sehingga dua praktikan yang
+      // presensi bersamaan tidak saling menimpa array `participants`.
+      await runTransaction(firestore, async (transaction) => {
+        const sessionRef = doc(firestore, 'sessions', sessionId);
+        const snap = await transaction.get(sessionRef);
+        if (!snap.exists()) {
+          throw new Error('Sesi tidak ditemukan.');
+        }
 
-      await updateDoc(doc(firestore, 'sessions', sessionId), {
-        participants: updatedParticipants,
+        const session = snap.data() as PracticumSession;
+        if (session.status === 'belum-dibuka') {
+          throw new Error('Sesi belum dibuka oleh asisten praktikum.');
+        }
+        if (session.status === 'selesai') {
+          throw new Error('Sesi sudah ditutup. Presensi tidak lagi diterima.');
+        }
+
+        const participantIndex = session.participants.findIndex(
+          (participant) => participant.id === participantId,
+        );
+        if (participantIndex === -1) {
+          throw new Error('Anda tidak terdaftar sebagai peserta pada sesi ini.');
+        }
+
+        const participant = session.participants[participantIndex];
+        if (participant.checkInAt) {
+          throw new Error(`Anda sudah tercatat hadir pada pukul ${participant.checkInAt}.`);
+        }
+
+        const updatedParticipants = [...session.participants];
+        updatedParticipants[participantIndex] = {
+          ...participant,
+          checkInAt: formatClock(),
+        };
+
+        transaction.update(sessionRef, { participants: updatedParticipants });
       });
 
       return SUCCESS;
@@ -469,6 +690,9 @@ export const firestoreDataService: DataService = {
   async submitPermit(
     input: SubmitPermitInput
   ): Promise<MutationResult & { permit?: Permit }> {
+    const authError = requireAuth();
+    if (authError) return authError;
+
     const session = cachedData.sessions.find((s) => s.id === input.sessionId);
     if (!session) return FAIL('Sesi praktikum tidak ditemukan.');
 
@@ -477,11 +701,13 @@ export const firestoreDataService: DataService = {
       return FAIL('Alasan izin terlalu singkat. Harap jelaskan minimal 5 karakter.');
     }
 
-    // Identifikasi mahasiswa yang mengajukan
-    const participantId = input.participantId || CURRENT_PRACTIKAN_ID;
+    // Identifikasi mahasiswa yang mengajukan. Akun Firebase Auth memakai uid,
+    // sedangkan roster memakai Participant.id — cocokkan juga lewat NIM.
+    const requestedId = input.participantId || CURRENT_PRACTIKAN_ID;
     const participant =
-      session.participants.find((p) => p.id === participantId) ||
-      session.participants[0];
+      session.participants.find((p) => p.id === requestedId) ??
+      (input.nim ? session.participants.find((p) => p.nim === input.nim) : undefined);
+    const participantId = participant?.id ?? requestedId;
 
     const participantName = input.participantName || participant?.name || 'Praktikan';
     const nim = input.nim || participant?.nim || '24060124120000';
@@ -518,18 +744,30 @@ export const firestoreDataService: DataService = {
 
   // FR-20 — keputusan izin oleh Asprak
   async decidePermit(id: string, decision: PermitDecisionInput): Promise<MutationResult> {
-    const existing = cachedData.permits.find((p) => p.id === id);
-    if (!existing) return FAIL('Pengajuan izin tidak ditemukan.');
+    const authError = requireAuth();
+    if (authError) return authError;
 
     try {
-      const updated: Partial<Permit> = {
-        status: decision.status,
-        decidedAt: new Date().toISOString(),
-        decidedBy: decision.decidedBy,
-        decisionNote: decision.note?.trim() || undefined,
-      };
+      await runTransaction(firestore, async (transaction) => {
+        const permitRef = doc(firestore, 'permits', id);
+        const snap = await transaction.get(permitRef);
+        if (!snap.exists()) {
+          throw new Error('Pengajuan izin tidak ditemukan.');
+        }
 
-      await updateDoc(doc(firestore, 'permits', id), updated);
+        const permit = snap.data() as Permit;
+        if (permit.status !== 'menunggu') {
+          throw new Error('Pengajuan izin ini sudah diputuskan.');
+        }
+
+        transaction.update(permitRef, {
+          status: decision.status,
+          decidedAt: new Date().toISOString(),
+          decidedBy: decision.decidedBy,
+          decisionNote: decision.note?.trim() || undefined,
+        });
+      });
+
       return SUCCESS;
     } catch (err: any) {
       return FAIL(err?.message || 'Gagal menyimpan keputusan izin.');

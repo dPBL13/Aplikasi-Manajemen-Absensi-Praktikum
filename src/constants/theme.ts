@@ -1,19 +1,19 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://unistyl.es/), etc.
+ * Design tokens for the "Eclipse & Moss" theme.
+ *
+ * Source of truth: `stitch_praktikum_absensi_ui_redesign/` (all 15 screens share
+ * the same token block). The app is intentionally dark-only: every screen uses
+ * the eclipse canvas with cream moss surfaces.
+ *
+ * Do not hardcode hex colours in components. Add a semantic key here and read it
+ * through `useTheme()`, `ThemedView`, or `ThemedText`.
  */
 
 import '@/global.css';
 
-import { Platform } from 'react-native';
-
 /**
- * Sage green palette used across the app.
- *
- * background  -> app background
- * surface     -> session cards
- * button      -> primary / additional buttons
- * mint, lime  -> alternating accents so the UI doesn't feel flat
+ * Primitive palette. These are the raw values from the stitched mockups.
+ * Components should normally read semantic keys from `Colors`, not primitives.
  */
 export const Palette = {
   background: '#87A878',
@@ -68,42 +68,91 @@ export const Colors = {
   },
 } as const;
 
-export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
+/** Type scale from the stitched designs (sizes, line heights, tracking). */
+export const Typography = {
+  displayMd: {
+    fontFamily: Fonts.display,
+    fontSize: 36,
+    lineHeight: 42,
+    letterSpacing: -0.5,
+  },
+  displayMdMobile: {
+    fontFamily: Fonts.display,
+    fontSize: 28,
+    lineHeight: 34,
+    letterSpacing: -0.25,
+  },
+  headlineLg: {
+    fontFamily: Fonts.display,
+    fontSize: 24,
+    lineHeight: 30,
+    letterSpacing: -0.2,
+  },
+  headlineMd: {
+    fontFamily: Fonts.display,
+    fontSize: 20,
+    lineHeight: 26,
+    letterSpacing: -0.1,
+  },
+  titleMd: {
+    fontFamily: Fonts.bodySemiBold,
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  bodyMd: {
+    fontFamily: Fonts.body,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  bodySm: {
+    fontFamily: Fonts.body,
+    fontSize: 12,
+    lineHeight: 17,
+    letterSpacing: 0.1,
+  },
+  labelLg: {
+    fontFamily: Fonts.bodySemiBold,
+    fontSize: 14,
+    lineHeight: 18,
+    letterSpacing: 0.1,
+  },
+  labelSm: {
+    fontFamily: Fonts.bodySemiBold,
+    fontSize: 11,
+    lineHeight: 14,
+    letterSpacing: 0.25,
+  },
+  monoSm: {
+    fontFamily: Fonts.mono,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+} as const;
 
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
-    rounded: 'var(--font-rounded)',
-    mono: 'var(--font-mono)',
-  },
-});
-
+/**
+ * Spacing scale (4px base). Legacy keys (`one`…`six`) are kept so existing
+ * screens keep working while they are restyled screen-by-screen.
+ */
 export const Spacing = {
   half: 2,
   one: 4,
   two: 8,
+  md: 12,
   three: 16,
+  section: 20,
   four: 24,
   five: 32,
   six: 64,
 } as const;
 
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
+/** Corner radii from the stitched designs. */
+export const Radius = {
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  full: 9999,
+} as const;
+
+export const BottomTabInset = 80;
 export const MaxContentWidth = 800;

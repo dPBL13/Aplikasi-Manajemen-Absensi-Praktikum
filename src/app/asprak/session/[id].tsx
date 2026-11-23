@@ -1,23 +1,17 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import {
-  Pressable,
-  StyleSheet,
-  TextInput,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { Pressable, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
 
 import { ActionButton } from '@/components/action-button';
 import { BottomSheetModal } from '@/components/bottom-sheet-modal';
+import { Card } from '@/components/card';
 import { FeedbackBanner, type FeedbackMessage } from '@/components/feedback-banner';
 import { InfoRow } from '@/components/info-row';
 import { ParticipantDetailModal } from '@/components/participant-detail-modal';
 import { ScreenScroll } from '@/components/screen-scroll';
 import { AttendanceBadge, PermitStatusBadge, SessionStatusBadge } from '@/components/status-badge';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { Radius, Spacing, Typography } from '@/constants/theme';
 import { SessionForm } from '@/features/asprak/session-form';
 import { useTheme } from '@/hooks/use-theme';
 import { dataService, useAppData } from '@/services';
@@ -54,13 +48,15 @@ export default function AsprakSessionDetailScreen() {
   if (!session) {
     return (
       <ScreenScroll>
-        <ThemedView type="backgroundElement" style={styles.card}>
-          <ThemedText type="subtitle">Sesi tidak ditemukan</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
+        <Card>
+          <ThemedText type="headlineMd" themeColor="onSurface">
+            Sesi tidak ditemukan
+          </ThemedText>
+          <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
             Sesi praktikum yang Anda cari tidak tersedia atau sudah dihapus.
           </ThemedText>
           <ActionButton label="Kembali ke jadwal" tone="secondary" onPress={() => router.back()} />
-        </ThemedView>
+        </Card>
       </ScreenScroll>
     );
   }
@@ -133,9 +129,9 @@ export default function AsprakSessionDetailScreen() {
       <Stack.Screen options={{ title: session.courseName }} />
 
       <ScreenScroll>
-        <ThemedView type="backgroundElement" style={styles.card}>
+        <Card>
           <View style={styles.titleRow}>
-            <ThemedText type="default" style={styles.titleText}>
+            <ThemedText type="headlineMd" themeColor="onSurface" style={styles.titleText}>
               {session.courseName}
             </ThemedText>
             <SessionStatusBadge status={session.status} />
@@ -152,18 +148,20 @@ export default function AsprakSessionDetailScreen() {
 
           {session.closingNote ? (
             <View style={[styles.noteBlock, { borderTopColor: theme.border }]}>
-              <ThemedText type="smallBold">Catatan penutupan</ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
+              <ThemedText type="labelSm" themeColor="onSurface">
+                Catatan penutupan
+              </ThemedText>
+              <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
                 {session.closingNote}
               </ThemedText>
             </View>
           ) : null}
-        </ThemedView>
+        </Card>
 
         {feedback ? <FeedbackBanner {...feedback} onDismiss={() => setFeedback(null)} /> : null}
 
-        <ThemedView type="backgroundElement" style={styles.card}>
-          <ThemedText type="default" style={styles.sectionTitle}>
+        <Card>
+          <ThemedText type="titleMd" themeColor="onSurface">
             Aksi Sesi
           </ThemedText>
 
@@ -190,7 +188,7 @@ export default function AsprakSessionDetailScreen() {
             <>
               {session.status === 'belum-dibuka' ? (
                 <>
-                  <ThemedText type="small" themeColor="textSecondary">
+                  <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
                     Buka sesi agar praktikan dapat melakukan presensi.
                   </ThemedText>
                   <ActionButton label="Buka Sesi" onPress={() => setPendingAction('open')} />
@@ -199,7 +197,7 @@ export default function AsprakSessionDetailScreen() {
 
               {session.status === 'berlangsung' ? (
                 <>
-                  <ThemedText type="small" themeColor="textSecondary">
+                  <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
                     Sesi sedang berlangsung. Tutup sesi setelah praktikum selesai.
                   </ThemedText>
                   <ActionButton
@@ -211,7 +209,7 @@ export default function AsprakSessionDetailScreen() {
               ) : null}
 
               {session.status === 'selesai' ? (
-                <ThemedText type="small" themeColor="textSecondary">
+                <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
                   Sesi telah ditutup{session.closedAt ? ` pukul ${session.closedAt}` : ''}. Presensi
                   baru tidak dapat dilakukan.
                 </ThemedText>
@@ -229,15 +227,15 @@ export default function AsprakSessionDetailScreen() {
               />
             </>
           )}
-        </ThemedView>
+        </Card>
 
         {permits.length > 0 ? (
-          <ThemedView type="backgroundElement" style={styles.card}>
+          <Card>
             <View style={styles.titleRow}>
-              <ThemedText type="default" style={styles.sectionTitle}>
+              <ThemedText type="titleMd" themeColor="onSurface">
                 Pengajuan Izin
               </ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
+              <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
                 {pendingPermits.length} menunggu
               </ThemedText>
             </View>
@@ -259,8 +257,10 @@ export default function AsprakSessionDetailScreen() {
                   pressed && styles.pressed,
                 ]}>
                 <View style={styles.participantInfo}>
-                  <ThemedText type="small">{permit.participantName}</ThemedText>
-                  <ThemedText type="code" themeColor="textSecondary">
+                  <ThemedText type="bodyMd" themeColor="onSurface">
+                    {permit.participantName}
+                  </ThemedText>
+                  <ThemedText type="monoSm" themeColor="onSurfaceSecondary">
                     {permit.nim}
                   </ThemedText>
                 </View>
@@ -268,25 +268,25 @@ export default function AsprakSessionDetailScreen() {
               </Pressable>
             ))}
 
-            <ThemedText type="small" themeColor="textSecondary">
+            <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
               Ketuk untuk membuka detail dan memutuskan pengajuan.
             </ThemedText>
-          </ThemedView>
+          </Card>
         ) : null}
 
         <View style={[styles.split, isWide && styles.splitWide]}>
-          <ThemedView type="backgroundElement" style={[styles.card, isWide && styles.cardSplit]}>
+          <Card style={isWide && styles.cardSplit}>
             <View style={styles.titleRow}>
-              <ThemedText type="default" style={styles.sectionTitle}>
+              <ThemedText type="titleMd" themeColor="onSurface">
                 Pemantauan Kehadiran
               </ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
+              <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
                 {summary.attended}/{summary.total} hadir
               </ThemedText>
             </View>
 
             {session.participants.length === 0 ? (
-              <ThemedText type="small" themeColor="textSecondary">
+              <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
                 Belum ada praktikan yang terdaftar pada sesi ini. Tambahkan peserta melalui detail
                 kelas.
               </ThemedText>
@@ -307,40 +307,42 @@ export default function AsprakSessionDetailScreen() {
                       pressed && styles.pressed,
                     ]}>
                     <View style={styles.participantInfo}>
-                      <ThemedText type="small">{participant.name}</ThemedText>
-                      <ThemedText type="code" themeColor="textSecondary">
+                      <ThemedText type="bodyMd" themeColor="onSurface">
+                        {participant.name}
+                      </ThemedText>
+                      <ThemedText type="monoSm" themeColor="onSurfaceSecondary">
                         {participant.nim}
                       </ThemedText>
                     </View>
 
                     <View style={styles.participantMeta}>
                       <AttendanceBadge attended={Boolean(participant.checkInAt)} />
-                      <ThemedText type="code" themeColor="textSecondary">
+                      <ThemedText type="monoSm" themeColor="onSurfaceSecondary">
                         {participant.checkInAt ?? '—'}
                       </ThemedText>
                     </View>
                   </Pressable>
                 ))}
 
-                <ThemedText type="small" themeColor="textSecondary">
+                <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
                   Ketuk nama praktikan untuk melihat detail kehadiran.
                 </ThemedText>
               </>
             )}
-          </ThemedView>
+          </Card>
 
-          <ThemedView type="backgroundElement" style={[styles.card, isWide && styles.cardSplit]}>
-            <ThemedText type="default" style={styles.sectionTitle}>
+          <Card style={isWide && styles.cardSplit}>
+            <ThemedText type="titleMd" themeColor="onSurface">
               Rekap Presensi
             </ThemedText>
 
-            <ThemedText type="small" themeColor="textSecondary">
+            <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
               {summary.attended} dari {summary.total} praktikan telah melakukan presensi
               {summary.total > 0 ? ` (${summary.rate}%)` : ''}.
             </ThemedText>
 
             {summary.attended === 0 ? (
-              <ThemedText type="small" themeColor="textSecondary">
+              <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
                 Belum ada presensi tercatat pada sesi ini.
               </ThemedText>
             ) : (
@@ -350,25 +352,27 @@ export default function AsprakSessionDetailScreen() {
                   .map((participant) => (
                     <View key={participant.id} style={styles.recapRow}>
                       <View style={styles.participantInfo}>
-                        <ThemedText type="small">{participant.name}</ThemedText>
-                        <ThemedText type="code" themeColor="textSecondary">
+                        <ThemedText type="bodyMd" themeColor="onSurface">
+                          {participant.name}
+                        </ThemedText>
+                        <ThemedText type="monoSm" themeColor="onSurfaceSecondary">
                           {participant.nim}
                         </ThemedText>
                       </View>
-                      <ThemedText type="code" themeColor="textSecondary">
+                      <ThemedText type="monoSm" themeColor="onSurfaceSecondary">
                         {participant.checkInAt}
                       </ThemedText>
                     </View>
                   ))}
 
                 {summary.absent > 0 ? (
-                  <ThemedText type="small" themeColor="textSecondary">
+                  <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
                     {summary.absent} praktikan belum melakukan presensi.
                   </ThemedText>
                 ) : null}
               </>
             )}
-          </ThemedView>
+          </Card>
         </View>
       </ScreenScroll>
 
@@ -386,13 +390,15 @@ export default function AsprakSessionDetailScreen() {
 
         {pendingAction === 'close' ? (
           <View style={styles.field}>
-            <ThemedText type="smallBold">Catatan sesi (opsional)</ThemedText>
+            <ThemedText type="labelSm" themeColor="onSurface">
+              Catatan sesi (opsional)
+            </ThemedText>
             <TextInput
               value={closeNote}
               onChangeText={setCloseNote}
               placeholder="Contoh: praktikum selesai tepat waktu"
-              placeholderTextColor={theme.textSecondary}
-              selectionColor={theme.link}
+              placeholderTextColor={theme.onSurfaceSecondary}
+              selectionColor={theme.accent}
               maxLength={160}
               multiline
               numberOfLines={3}
@@ -401,13 +407,13 @@ export default function AsprakSessionDetailScreen() {
               style={[
                 styles.noteInput,
                 {
-                  backgroundColor: theme.highlight,
-                  borderColor: theme.border,
-                  color: theme.text,
+                  backgroundColor: theme.surfaceAlt,
+                  borderColor: theme.accent,
+                  color: theme.onSurface,
                 },
               ]}
             />
-            <ThemedText type="small" themeColor="textSecondary" style={styles.counter}>
+            <ThemedText type="bodySm" themeColor="onSurfaceSecondary" style={styles.counter}>
               {closeNote.length}/160
             </ThemedText>
           </View>
@@ -440,12 +446,6 @@ export default function AsprakSessionDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  card: {
-    width: '100%',
-    padding: Spacing.three,
-    borderRadius: Spacing.three,
-    gap: Spacing.two,
-  },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -454,13 +454,8 @@ const styles = StyleSheet.create({
   },
   titleText: {
     flexShrink: 1,
-    fontWeight: 600,
-  },
-  sectionTitle: {
-    fontWeight: 600,
   },
   noteBlock: {
-    marginTop: Spacing.one,
     paddingTop: Spacing.two,
     borderTopWidth: StyleSheet.hairlineWidth,
     gap: Spacing.one,
@@ -475,8 +470,6 @@ const styles = StyleSheet.create({
   },
   cardSplit: {
     flex: 1,
-    width: 'auto',
-    alignSelf: 'stretch',
   },
   participantRow: {
     flexDirection: 'row',
@@ -518,9 +511,9 @@ const styles = StyleSheet.create({
   noteInput: {
     minHeight: 88,
     borderWidth: 1,
-    borderRadius: Spacing.two,
+    borderRadius: Radius.md,
     padding: Spacing.three,
-    fontSize: 14,
+    ...Typography.bodyMd,
   },
   counter: {
     alignSelf: 'flex-end',
