@@ -462,12 +462,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   listContent: {
-    alignItems: 'center',
     gap: Spacing.three,
   },
   header: {
     width: '100%',
     maxWidth: MaxContentWidth,
+    alignSelf: 'center',
     gap: Spacing.three,
   },
   heading: {
@@ -477,6 +477,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.two,
+    maxWidth: '100%',
   },
   filters: {
     gap: Spacing.three,
@@ -503,6 +504,8 @@ const styles = StyleSheet.create({
   filterField: {
     flexGrow: 1,
     flexBasis: 220,
+    minWidth: 0,
+    maxWidth: '100%',
   },
   chips: {
     flexDirection: 'row',
@@ -531,6 +534,7 @@ const styles = StyleSheet.create({
   sectionHeader: {
     width: '100%',
     maxWidth: MaxContentWidth,
+    alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
@@ -546,16 +550,19 @@ const styles = StyleSheet.create({
   sessionRow: {
     width: '100%',
     maxWidth: MaxContentWidth,
+    alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'stretch',
     gap: Spacing.three,
   },
   sessionCell: {
     flex: 1,
+    minWidth: 0,
   },
   block: {
     width: '100%',
     maxWidth: MaxContentWidth,
+    alignSelf: 'center',
     gap: Spacing.two,
   },
   pressed: {
