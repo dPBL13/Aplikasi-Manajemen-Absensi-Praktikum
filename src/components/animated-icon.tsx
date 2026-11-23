@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
 import Animated, { Easing, Keyframe } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
-import { Palette } from '@/constants/theme';
 
 import { Palette } from '@/constants/theme';
 
@@ -136,14 +135,14 @@ const styles = StyleSheet.create({
   },
   background: {
     borderRadius: 40,
-    experimental_backgroundImage: `linear-gradient(180deg, ${Palette.button}, ${Palette.background})`,
+    experimental_backgroundImage: `linear-gradient(180deg, ${Palette.eclipseMid}, ${Palette.eclipseCanvas})`,
     width: 128,
     height: 128,
     position: 'absolute',
   },
   splashOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: Palette.background,
+    backgroundColor: Palette.eclipseCanvas,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000,

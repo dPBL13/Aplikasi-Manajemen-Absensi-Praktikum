@@ -23,12 +23,25 @@ export function ActionButton({
   accessibilityLabel,
 }: ActionButtonProps) {
   const theme = useTheme();
-  const isSecondary = tone === 'secondary';
-  const textColor = isSecondary
-    ? theme.text
-    : tone === 'danger'
-      ? Palette.background
-      : theme.accentText;
+
+  const palette =
+    tone === 'secondary'
+      ? {
+          backgroundColor: theme.secondarySurface,
+          borderColor: theme.secondaryBorder,
+          color: theme.secondaryText,
+        }
+      : tone === 'danger'
+        ? {
+            backgroundColor: theme.dangerBackground,
+            borderColor: theme.dangerBorder,
+            color: theme.danger,
+          }
+        : {
+            backgroundColor: theme.accent,
+            borderColor: 'transparent',
+            color: theme.accentText,
+          };
 
   return (
     <Pressable

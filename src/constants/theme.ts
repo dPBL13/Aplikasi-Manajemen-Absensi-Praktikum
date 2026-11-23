@@ -16,56 +16,120 @@ import '@/global.css';
  * Components should normally read semantic keys from `Colors`, not primitives.
  */
 export const Palette = {
-  background: '#87A878',
-  surface: '#B8C1A5',
-  button: '#A0B68C',
-  mint: '#C2DDAB',
-  lime: '#D1E8A5',
-  ink: '#1A2420',
-  inkSoft: '#394733',
-  border: '#6A8455',
-  link: '#2A6A44',
-  danger: '#C54737',
-  dangerSurface: '#F7DAD3',
+  /** Dark canvas family */
+  eclipseCanvas: '#272757',
+  eclipseDeep: '#0F0E47',
+  eclipseMid: '#505081',
+  eclipseMuted: '#8686AC',
+
+  /** Cream surface family */
+  mossCanvas: '#CBCBCB',
+  mossSurface: '#FFFFE3',
+  mossSurfaceElevated: '#CBCBCB',
+  mossPrimary: '#586B7E',
+  mossDeep: '#4A4A4A',
+
+  /** Text */
+  textOnDark: '#FFFFE3',
+  textOnDarkMuted: '#CBCBCB',
+  textPrimary: '#4A4A4A',
+  textSecondary: '#4A4A4A',
+
+  /** Status */
+  statusActive: '#586B7E',
+  statusPending: '#CBCBCB',
+  statusCompleted: '#FFFFE3',
+  statusAlert: '#E8C5BE',
+  onStatusAlert: '#7A2E22',
+  alertBorder: '#A84A3B',
+
+  /** Disabled */
+  disabled: '#CBCBCB',
+  onDisabled: '#4A4A4A',
+} as const;
+
+/**
+ * Semantic colours. Every key exists in both `light` and `dark` because the app
+ * is dark-only — both maps resolve to the same eclipse theme so any legacy
+ * `Colors.light` / `Colors.dark` read still lands on the new design.
+ */
+const Eclipse = {
+  /** Default text on the dark canvas. */
+  text: Palette.textOnDark,
+  /** Muted text on the dark canvas. */
+  textSecondary: Palette.textOnDarkMuted,
+
+  /** App background (eclipse canvas). */
+  background: Palette.eclipseCanvas,
+  /** Cream card surface. Text on it must use `onSurface`. */
+  backgroundElement: Palette.mossSurface,
+  /** Header / tab bar / pressed canvas. */
+  backgroundSelected: Palette.eclipseDeep,
+  /** Inner elevated row on a cream card. */
+  surfaceAlt: Palette.mossSurfaceElevated,
+  /** Chips and selected controls on the dark canvas. */
+  highlight: Palette.eclipseMid,
+  /** Subtle borders on the dark canvas and around cream cards. */
+  border: Palette.eclipseMuted,
+
+  /** Interactive text on the dark canvas. */
+  link: Palette.textOnDark,
+
+  /** Primary action (moss primary). */
+  accent: Palette.mossPrimary,
+  /** Text/icon on the primary action. */
+  accentText: Palette.mossSurface,
+  /** Primary action pressed state. */
+  accentPressed: Palette.mossDeep,
+
+  /** Default text on a cream card. */
+  onSurface: Palette.textPrimary,
+  /** Muted text on a cream card. */
+  onSurfaceSecondary: Palette.textSecondary,
+  /** Text on an elevated row inside a cream card. */
+  onSurfaceAlt: Palette.textPrimary,
+
+  /** Secondary action surface + border + text. */
+  secondarySurface: Palette.mossSurfaceElevated,
+  secondaryBorder: Palette.mossDeep,
+  secondaryText: Palette.mossDeep,
+
+  /** Success feedback. */
+  success: '#2F5D46',
+  successBackground: '#DDEBDD',
+
+  /** Danger / alert feedback (matches the mockup alert tokens). */
+  danger: Palette.onStatusAlert,
+  dangerBackground: Palette.statusAlert,
+  dangerBorder: Palette.alertBorder,
+
+  /** Disabled control. */
+  disabled: Palette.disabled,
+  onDisabled: Palette.onDisabled,
+
+  /** Modal scrim. Low enough to keep the screen readable behind the sheet. */
+  overlay: 'rgba(15, 14, 71, 0.48)',
 } as const;
 
 export const Colors = {
-  light: {
-    text: Palette.ink,
-    background: Palette.background,
-    backgroundElement: Palette.surface,
-    backgroundSelected: Palette.button,
-    surfaceAlt: Palette.mint,
-    highlight: Palette.lime,
-    textSecondary: Palette.inkSoft,
-    border: Palette.border,
-    link: Palette.link,
-    accent: Palette.button,
-    accentText: Palette.ink,
-    success: Palette.link,
-    successBackground: Palette.mint,
-    danger: Palette.danger,
-    dangerBackground: Palette.dangerSurface,
-    overlay: 'rgba(31, 42, 27, 0.55)',
-  },
-  dark: {
-    text: '#F3F8EE',
-    background: '#3C5533',
-    backgroundElement: '#557346',
-    backgroundSelected: '#6C8F5C',
-    surfaceAlt: '#48663D',
-    highlight: '#4A6A3E',
-    textSecondary: '#D2E3C6',
-    border: '#88A87A',
-    link: Palette.lime,
-    accent: Palette.button,
-    accentText: Palette.ink,
-    success: Palette.lime,
-    successBackground: '#3A6B37',
-    danger: '#FFB4AB',
-    dangerBackground: '#4B1D1A',
-    overlay: 'rgba(0, 0, 0, 0.65)',
-  },
+  light: Eclipse,
+  dark: Eclipse,
+} as const;
+
+export type ThemeColor = keyof typeof Colors.light;
+
+/**
+ * Font families loaded in `src/app/_layout.tsx` via `expo-font`.
+ * `display` is Red Hat Display; body/label is Commissioner; mono is Spline Sans Mono.
+ */
+export const Fonts = {
+  display: 'RedHatDisplay_700Bold',
+  displaySemiBold: 'RedHatDisplay_600SemiBold',
+  body: 'Commissioner_400Regular',
+  bodyMedium: 'Commissioner_500Medium',
+  bodySemiBold: 'Commissioner_600SemiBold',
+  bodyBold: 'Commissioner_700Bold',
+  mono: 'SplineSansMono_500Medium',
 } as const;
 
 /** Type scale from the stitched designs (sizes, line heights, tracking). */
