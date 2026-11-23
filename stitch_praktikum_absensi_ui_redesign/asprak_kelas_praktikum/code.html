@@ -1,0 +1,296 @@
+<!DOCTYPE html><html lang="id"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kelas Praktikum — Manajemen Absensi Praktikum</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script id="tailwind-config">/** @type {import('tailwindcss').Config} */
+globalThis.tailwind = globalThis.tailwind || {};
+globalThis.tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        'eclipse-canvas': '#272757',
+        'on-eclipse-canvas': '#FFFFE3',
+        'eclipse-deep': '#0F0E47',
+        'on-eclipse-deep': '#FFFFE3',
+        'eclipse-mid': '#505081',
+        'on-eclipse-mid': '#FFFFE3',
+        'eclipse-muted': '#8686AC',
+        'moss-canvas': '#CBCBCB',
+        'on-moss-canvas': '#4A4A4A',
+        'moss-surface': '#FFFFE3',
+        'on-moss-surface': '#4A4A4A',
+        'moss-surface-elevated': '#CBCBCB',
+        'on-moss-surface-elevated': '#4A4A4A',
+        'moss-primary': '#586B7E',
+        'on-moss-primary': '#FFFFE3',
+        'moss-deep': '#4A4A4A',
+        'on-moss-deep': '#FFFFE3',
+        'text-primary': '#4A4A4A',
+        'text-secondary': '#4A4A4A',
+        'text-on-dark': '#FFFFE3',
+        'border-subtle': '#8686AC',
+        'status-active': '#586B7E',
+        'on-status-active': '#FFFFE3',
+        'status-pending': '#CBCBCB',
+        'on-status-pending': '#4A4A4A',
+        'status-completed': '#FFFFE3',
+        'on-status-completed': '#4A4A4A',
+        'status-alert': '#E8C5BE',
+        'on-status-alert': '#7A2E22',
+        'alert-border': '#A84A3B',
+        'disabled': '#CBCBCB',
+        'on-disabled': '#4A4A4A',
+      },
+      borderRadius: {
+        'sm': '8px',
+        'DEFAULT': '12px',
+        'md': '12px',
+        'lg': '16px',
+        'xl': '20px',
+        'full': '9999px',
+      },
+      spacing: {
+        'gutter-xs': '4px',
+        'gutter-sm': '8px',
+        'gutter-md': '12px',
+        'gutter-lg': '16px',
+        'gutter-xl': '24px',
+        'section': '20px',
+        'page-margin': '16px',
+      },
+      fontFamily: {
+        'display': ['"Red Hat Display"', 'sans-serif'],
+        'headline': ['"Red Hat Display"', 'sans-serif'],
+        'title': ['"Commissioner"', 'sans-serif'],
+        'body': ['"Commissioner"', 'sans-serif'],
+        'label': ['"Commissioner"', 'sans-serif'],
+        'mono': ['"Spline Sans Mono"', 'monospace'],
+      },
+      fontSize: {
+        'display-md': ['36px', { lineHeight: '42px', letterSpacing: '-0.5px', fontWeight: '700' }],
+        'display-md-mobile': ['28px', { lineHeight: '34px', letterSpacing: '-0.25px', fontWeight: '700' }],
+        'headline-lg': ['24px', { lineHeight: '30px', letterSpacing: '-0.2px', fontWeight: '700' }],
+        'headline-md': ['20px', { lineHeight: '26px', letterSpacing: '-0.1px', fontWeight: '700' }],
+        'title-md': ['16px', { lineHeight: '22px', letterSpacing: '0px', fontWeight: '600' }],
+        'body-md': ['14px', { lineHeight: '20px', letterSpacing: '0px', fontWeight: '400' }],
+        'body-sm': ['12px', { lineHeight: '17px', letterSpacing: '0.1px', fontWeight: '400' }],
+        'label-lg': ['14px', { lineHeight: '18px', letterSpacing: '0.1px', fontWeight: '600' }],
+        'label-sm': ['11px', { lineHeight: '14px', letterSpacing: '0.25px', fontWeight: '600' }],
+        'mono-sm': ['12px', { lineHeight: '16px', letterSpacing: '0px', fontWeight: '500' }],
+      },
+      transitionDuration: {
+        'state-change': '120ms',
+        'surface-enter': '220ms',
+      },
+      transitionDelay: {
+        'state-change': '0ms',
+        'surface-enter': '0ms',
+      },
+      transitionTimingFunction: {
+        'state-change': 'ease-out',
+        'surface-enter': 'cubic-bezier(0.2, 0, 0, 1)',
+      },
+    },
+  },
+};
+if (typeof module !== 'undefined') module.exports = globalThis.tailwind.config;
+</script>
+  <link href="https://fonts.googleapis.com/css2?family=Commissioner:wght@400;500;600;700&amp;family=Red+Hat+Display:wght@600;700&amp;family=Spline+Sans+Mono:wght@500&amp;display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block" rel="stylesheet">
+  <style>.material-symbols-outlined, .material-symbols-rounded, .material-symbols-sharp, .material-icons { display: inline-block; width: 1em; height: 1em; line-height: 1 !important; box-sizing: content-box; overflow: hidden; white-space: nowrap; direction: ltr; vertical-align: middle; }</style>
+</head>
+<body class="bg-eclipse-canvas text-on-eclipse-canvas font-body antialiased">
+  <div class="min-h-[884px] w-full max-w-md mx-auto bg-eclipse-canvas flex flex-col" data-stitch-vh="min-h-[884px]===min-h-screen">
+
+    <!-- Top App Header -->
+    <header class="sticky top-0 z-20 bg-eclipse-canvas border-b border-eclipse-mid px-page-margin py-gutter-md flex items-center justify-between gap-gutter-sm">
+      <div class="flex flex-col">
+        <h1 data-design-text-token="headline-md" class="font-headline text-headline-md text-on-eclipse-canvas">Kelas Praktikum</h1>
+        <p data-design-text-token="body-sm" class="font-body text-body-sm text-moss-surface">Asprak · Johan Reinhart Calvin</p>
+      </div>
+      <!-- COMPONENT: chip-action -->
+      <button data-component-id="chip-action" data-component-type="chip" data-component-variant="action" type="button" class="inline-flex items-center gap-gutter-xs bg-eclipse-mid text-on-eclipse-mid border border-eclipse-muted font-label text-label-sm px-gutter-md py-gutter-xs rounded-full transition-colors duration-state-change ease-state-change hover:bg-eclipse-deep">
+        <span class="material-symbols-outlined text-body-md" aria-hidden="true">swap_horiz</span>
+        <span data-design-text-token="label-sm">Ganti peran</span>
+      </button>
+    </header>
+
+    <!-- Main Scroll Content -->
+    <main class="flex-1 px-page-margin pt-gutter-lg pb-24 flex flex-col gap-gutter-lg">
+
+      <!-- Compact Summary & Action Bar -->
+      <section aria-label="Ringkasan Kelas dan Aksi" class="bg-moss-surface border border-border-subtle rounded-lg p-gutter-md flex items-center justify-between gap-gutter-md">
+        <div class="grid grid-cols-2 gap-gutter-md flex-1">
+          <div class="flex flex-col">
+            <span data-design-text-token="headline-md" class="font-headline text-headline-md text-text-primary tabular-nums">3</span>
+            <span data-design-text-token="label-sm" class="font-label text-label-sm text-text-secondary">Total Kelas</span>
+          </div>
+          <div class="flex flex-col border-l border-border-subtle pl-gutter-md">
+            <span data-design-text-token="headline-md" class="font-headline text-headline-md text-moss-primary tabular-nums">51</span>
+            <span data-design-text-token="label-sm" class="font-label text-label-sm text-text-secondary">Praktikan</span>
+          </div>
+        </div>
+        <!-- COMPONENT: button-with-icon -->
+        <button data-component-id="button-with-icon" data-component-type="button" data-component-variant="with-icon" type="button" class="inline-flex items-center justify-center gap-gutter-xs bg-moss-primary text-on-moss-primary font-label text-label-lg px-gutter-md py-gutter-sm rounded-md shrink-0 transition-colors duration-state-change ease-state-change hover:bg-moss-deep active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss-surface">
+          <span class="material-symbols-outlined text-title-md" aria-hidden="true">add</span>
+          <span data-design-text-token="label-lg">Kelas Baru</span>
+        </button>
+      </section>
+
+      <!-- Search Bar + Count -->
+      <section aria-label="Cari Kelas" class="flex flex-col gap-gutter-sm">
+        <!-- COMPONENT: input-field-search -->
+        <label data-component-id="input-field-search" data-component-type="input-field" data-component-variant="search" class="relative flex items-center w-full">
+          <span class="material-symbols-outlined text-title-md text-moss-primary absolute left-gutter-md pointer-events-none" aria-hidden="true">search</span>
+          <input id="class-search" type="search" placeholder="Cari nama, kode, atau ruang..." class="w-full bg-moss-surface-elevated text-text-primary placeholder:text-text-secondary border border-moss-primary rounded-md pl-10 pr-gutter-md py-gutter-sm font-body text-body-md focus:outline-none focus:ring-2 focus:ring-moss-surface">
+        </label>
+        <div class="flex items-center justify-between">
+          <span data-design-text-token="body-sm" class="font-body text-body-sm text-moss-surface">Daftar kelas &amp; peserta praktikan</span>
+          <span id="class-count" data-design-text-token="body-sm" class="font-body text-body-sm text-moss-surface tabular-nums">3 kelas</span>
+        </div>
+      </section>
+
+      <!-- Class Cards -->
+      <section aria-label="Daftar Kelas" class="flex flex-col gap-gutter-md">
+
+        <!-- Class 1 -->
+        <!-- COMPONENT: card-outlined -->
+        <article data-component-id="card-outlined" data-component-type="card" data-component-variant="outlined" data-search="ppk ppk-301 kelas a lk1" class="class-card bg-moss-surface border border-border-subtle rounded-lg p-gutter-lg flex flex-col gap-gutter-md">
+          <header class="flex items-start justify-between gap-gutter-sm">
+            <div class="flex flex-col gap-gutter-xs">
+              <h2 data-design-text-token="title-md" class="font-title text-title-md text-text-primary">PPK</h2>
+              <p data-design-text-token="body-sm" class="font-body text-body-sm text-text-secondary">Kelas A · Lab LK1</p>
+            </div>
+            <span data-design-text-token="mono-sm" class="font-mono text-mono-sm bg-moss-surface-elevated text-text-primary border border-border-subtle px-gutter-sm py-gutter-xs rounded-md tabular-nums">PPK-301</span>
+          </header>
+
+          <div class="bg-moss-surface-elevated rounded-md px-gutter-md py-gutter-sm flex items-center justify-between gap-gutter-sm">
+            <div class="flex items-center gap-gutter-xs">
+              <span class="material-symbols-outlined text-body-md text-moss-primary" aria-hidden="true">group</span>
+              <span data-design-text-token="body-sm" class="font-body text-body-sm text-text-primary tabular-nums">3 peserta · 1 sesi</span>
+            </div>
+            <a href="#kelola-ppk-301" class="inline-flex items-center gap-gutter-xs text-moss-deep font-label text-label-lg hover:text-moss-primary transition-colors duration-state-change ease-state-change">
+              <span data-design-text-token="label-lg">Kelola Kelas</span>
+              <span class="material-symbols-outlined text-title-md" aria-hidden="true">arrow_forward</span>
+            </a>
+          </div>
+        </article>
+
+        <!-- Class 2 -->
+        <!-- COMPONENT: card-outlined -->
+        <article data-component-id="card-outlined" data-component-type="card" data-component-variant="outlined" data-search="ppk ppk-302 kelas b lk2" class="class-card bg-moss-surface border border-border-subtle rounded-lg p-gutter-lg flex flex-col gap-gutter-md">
+          <header class="flex items-start justify-between gap-gutter-sm">
+            <div class="flex flex-col gap-gutter-xs">
+              <h2 data-design-text-token="title-md" class="font-title text-title-md text-text-primary">PPK</h2>
+              <p data-design-text-token="body-sm" class="font-body text-body-sm text-text-secondary">Kelas B · Lab LK2</p>
+            </div>
+            <span data-design-text-token="mono-sm" class="font-mono text-mono-sm bg-moss-surface-elevated text-text-primary border border-border-subtle px-gutter-sm py-gutter-xs rounded-md tabular-nums">PPK-302</span>
+          </header>
+
+          <div class="bg-moss-surface-elevated rounded-md px-gutter-md py-gutter-sm flex items-center justify-between gap-gutter-sm">
+            <div class="flex items-center gap-gutter-xs">
+              <span class="material-symbols-outlined text-body-md text-moss-primary" aria-hidden="true">group</span>
+              <span data-design-text-token="body-sm" class="font-body text-body-sm text-text-primary tabular-nums">24 peserta · 4 sesi</span>
+            </div>
+            <a href="#kelola-ppk-302" class="inline-flex items-center gap-gutter-xs text-moss-deep font-label text-label-lg hover:text-moss-primary transition-colors duration-state-change ease-state-change">
+              <span data-design-text-token="label-lg">Kelola Kelas</span>
+              <span class="material-symbols-outlined text-title-md" aria-hidden="true">arrow_forward</span>
+            </a>
+          </div>
+        </article>
+
+        <!-- Class 3 -->
+        <!-- COMPONENT: card-outlined -->
+        <article data-component-id="card-outlined" data-component-type="card" data-component-variant="outlined" data-search="struktur data sd-204 kelas c lk3" class="class-card bg-moss-surface border border-border-subtle rounded-lg p-gutter-lg flex flex-col gap-gutter-md">
+          <header class="flex items-start justify-between gap-gutter-sm">
+            <div class="flex flex-col gap-gutter-xs">
+              <h2 data-design-text-token="title-md" class="font-title text-title-md text-text-primary">Struktur Data</h2>
+              <p data-design-text-token="body-sm" class="font-body text-body-sm text-text-secondary">Kelas C · Lab LK3</p>
+            </div>
+            <span data-design-text-token="mono-sm" class="font-mono text-mono-sm bg-moss-surface-elevated text-text-primary border border-border-subtle px-gutter-sm py-gutter-xs rounded-md tabular-nums">SD-204</span>
+          </header>
+
+          <div class="bg-moss-surface-elevated rounded-md px-gutter-md py-gutter-sm flex items-center justify-between gap-gutter-sm">
+            <div class="flex items-center gap-gutter-xs">
+              <span class="material-symbols-outlined text-body-md text-moss-primary" aria-hidden="true">group</span>
+              <span data-design-text-token="body-sm" class="font-body text-body-sm text-text-primary tabular-nums">24 peserta · 6 sesi</span>
+            </div>
+            <a href="#kelola-sd-204" class="inline-flex items-center gap-gutter-xs text-moss-deep font-label text-label-lg hover:text-moss-primary transition-colors duration-state-change ease-state-change">
+              <span data-design-text-token="label-lg">Kelola Kelas</span>
+              <span class="material-symbols-outlined text-title-md" aria-hidden="true">arrow_forward</span>
+            </a>
+          </div>
+        </article>
+
+      </section>
+    </main>
+
+    <!-- Bottom Tab Bar (Asprak Navigation Shell) -->
+    <nav aria-label="Navigasi Utama Asprak" class="fixed bottom-0 left-0 right-0 max-w-md mx-auto z-30 bg-eclipse-deep border-t border-eclipse-mid px-gutter-sm py-gutter-xs">
+      <ul class="grid grid-cols-4 gap-gutter-xs">
+        <li>
+          <a href="#jadwal" class="flex flex-col items-center justify-center gap-gutter-xs py-gutter-xs rounded-md text-on-eclipse-deep hover:text-moss-surface transition-colors duration-state-change ease-state-change">
+            <span class="inline-flex items-center justify-center px-gutter-md py-gutter-xs rounded-full">
+              <span class="material-symbols-outlined text-title-md" aria-hidden="true">calendar_month</span>
+            </span>
+            <span data-design-text-token="label-sm" class="font-label text-label-sm">Jadwal</span>
+          </a>
+        </li>
+        <li>
+          <a href="#kelas" aria-current="page" class="flex flex-col items-center justify-center gap-gutter-xs py-gutter-xs rounded-md text-moss-surface">
+            <span class="inline-flex items-center justify-center bg-moss-primary text-on-moss-primary px-gutter-md py-gutter-xs rounded-full">
+              <span class="material-symbols-outlined text-title-md" style="font-variation-settings: &#39;FILL&#39; 1;" aria-hidden="true">school</span>
+            </span>
+            <span data-design-text-token="label-sm" class="font-label text-label-sm">Kelas</span>
+          </a>
+        </li>
+        <li>
+          <a href="#rekap" class="flex flex-col items-center justify-center gap-gutter-xs py-gutter-xs rounded-md text-on-eclipse-deep hover:text-moss-surface transition-colors duration-state-change ease-state-change">
+            <span class="inline-flex items-center justify-center px-gutter-md py-gutter-xs rounded-full">
+              <span class="material-symbols-outlined text-title-md" aria-hidden="true">analytics</span>
+            </span>
+            <span data-design-text-token="label-sm" class="font-label text-label-sm">Rekap</span>
+          </a>
+        </li>
+        <li>
+          <a href="#izin" class="flex flex-col items-center justify-center gap-gutter-xs py-gutter-xs rounded-md text-on-eclipse-deep hover:text-moss-surface transition-colors duration-state-change ease-state-change">
+            <span class="inline-flex items-center justify-center px-gutter-md py-gutter-xs rounded-full">
+              <span class="material-symbols-outlined text-title-md" aria-hidden="true">assignment_late</span>
+            </span>
+            <span data-design-text-token="label-sm" class="font-label text-label-sm">Izin</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+
+  </div>
+
+  <script>
+    (function () {
+      const searchInput = document.getElementById('class-search');
+      const cards = document.querySelectorAll('.class-card');
+      const countLabel = document.getElementById('class-count');
+
+      searchInput.addEventListener('input', () => {
+        const query = (searchInput.value || '').trim().toLowerCase();
+        let visible = 0;
+
+        cards.forEach((card) => {
+          const text = (card.getAttribute('data-search') || '').toLowerCase();
+          if (!query || text.includes(query)) {
+            card.classList.remove('hidden');
+            visible++;
+          } else {
+            card.classList.add('hidden');
+          }
+        });
+
+        countLabel.textContent = visible + ' kelas';
+      });
+    })();
+  </script>
+
+
+</body></html>
