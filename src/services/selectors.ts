@@ -44,27 +44,54 @@ export function findPermit(data: AppData, id: string | undefined): Permit | unde
   return id ? data.permits.find((item) => item.id === id) : undefined;
 }
 
-/** Sesi yang diikuti seorang praktikan (berdasarkan roster sesi). */
+/**
+ * Sesi yang diikuti seorang praktikan (berdasarkan roster sesi).
+ * Identitas dicocokkan lewat `participantId` (id roster) atau `nim`, karena
+ * akun Firebase Auth memakai uid yang berbeda dari `Participant.id`.
+ */
 export function sessionsForParticipant(
   data: AppData,
   participantId: string,
+  nim?: string,
 ): PracticumSession[] {
   return data.sessions.filter((session) =>
-    session.participants.some((participant) => participant.id === participantId),
+    session.participants.some(
+      (participant) => participant.id === participantId || (nim ? participant.nim === nim : false),
+    ),
   );
 }
 
 export function findSessionParticipant(
   session: PracticumSession,
   participantId: string,
+  nim?: string,
 ): SessionParticipant | undefined {
-  return session.participants.find((participant) => participant.id === participantId);
+  return session.participants.find(
+    (participant) => participant.id === participantId || (nim ? participant.nim === nim : false),
+  );
 }
 
 /** Peserta kelas tempat praktikan terdaftar (dipakai untuk lookup identitas). */
 export function findParticipant(data: AppData, participantId: string): Participant | undefined {
   for (const practicumClass of data.classes) {
     const participant = practicumClass.participants.find((item) => item.id === participantId);
+
+    if (participant) {
+      return participant;
+    }
+  }
+
+  return undefined;
+}
+
+/** Cari peserta berdasarkan NIM (kunci yang dipakai akun Firebase Auth praktikan). */
+export function findParticipantByNim(data: AppData, nim: string): Participant | undefined {
+  if (!nim) {
+    return undefined;
+  }
+
+  for (const practicumClass of data.classes) {
+    const participant = practicumClass.participants.find((item) => item.nim === nim);
 
     if (participant) {
       return participant;

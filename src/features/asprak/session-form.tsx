@@ -2,14 +2,25 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ActionButton } from '@/components/action-button';
+import { DateTimeField } from '@/components/date-time-field';
 import { FeedbackBanner, type FeedbackMessage } from '@/components/feedback-banner';
 import { FormField } from '@/components/form-field';
+import { SelectField } from '@/components/select-field';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { hasErrors, validateSessionInput } from '@/services/validation';
 import type { FieldErrors, MutationResult, SessionInput } from '@/services/types';
 import type { PracticumClass } from '@/types/domain';
+import {
+  DAY_PICKER_ORDER,
+  dayLabelForDate,
+  formatDateLabel,
+  parseDateLabel,
+} from '@/utils/date-label';
+import { formatClock } from '@/utils/format-clock';
+
+const DAY_OPTIONS = DAY_PICKER_ORDER.map((day) => ({ label: day, value: day }));
 
 type SessionFormProps = {
   classes: PracticumClass[];
@@ -64,7 +75,9 @@ export function SessionForm({
   return (
     <View style={styles.form}>
       <View style={styles.field}>
-        <ThemedText type="smallBold">Kelas praktikum</ThemedText>
+        <ThemedText type="labelSm" themeColor="onSurface">
+          Kelas praktikum
+        </ThemedText>
         <View style={styles.chips}>
           {classes.map((practicumClass) => {
             const isActive = values.classId === practicumClass.id;
@@ -81,12 +94,14 @@ export function SessionForm({
                 style={({ pressed }) => [
                   styles.chip,
                   {
-                    backgroundColor: isActive ? theme.highlight : theme.background,
-                    borderColor: theme.border,
+                    backgroundColor: isActive ? theme.accent : theme.surfaceAlt,
+                    borderColor: isActive ? theme.accent : theme.accent,
                   },
                   pressed && styles.pressed,
                 ]}>
-                <ThemedText type="small" style={{ color: isActive ? theme.text : theme.textSecondary }}>
+                <ThemedText
+                  type="bodySm"
+                  style={{ color: isActive ? theme.accentText : theme.onSurface }}>
                   {practicumClass.courseName} · {practicumClass.classGroup}
                 </ThemedText>
               </Pressable>
@@ -94,49 +109,69 @@ export function SessionForm({
           })}
         </View>
         {errors.classId ? (
-          <ThemedText type="small" style={{ color: theme.danger }}>
+          <ThemedText type="bodySm" style={{ color: theme.danger }}>
             {errors.classId}
           </ThemedText>
         ) : null}
         {classes.length === 0 ? (
-          <ThemedText type="small" themeColor="textSecondary">
+          <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
             Belum ada kelas. Buat kelas terlebih dahulu di tab Kelas.
           </ThemedText>
         ) : null}
       </View>
 
-      <FormField
+      <SelectField
         label="Hari"
         value={values.dayLabel}
-        onChangeText={setField('dayLabel')}
-        placeholder="Contoh: Senin"
+        placeholder="Pilih hari"
+        options={DAY_OPTIONS}
+        onSelect={setField('dayLabel')}
         error={errors.dayLabel}
       />
-      <FormField
+      <DateTimeField
         label="Tanggal"
+        mode="date"
         value={values.dateLabel}
-        onChangeText={setField('dateLabel')}
-        placeholder="Contoh: 2 November 2026"
+        placeholder="Pilih tanggal"
+        onChange={(date) => {
+          setValues((previous) => ({
+            ...previous,
+            dateLabel: formatDateLabel(date),
+            dayLabel: dayLabelForDate(date),
+          }));
+          setErrors((previous) => ({ ...previous, dateLabel: '', dayLabel: '' }));
+        }}
+        onChangeText={(text) => {
+          setField('dateLabel')(text);
+
+          const parsed = parseDateLabel(text);
+
+          if (parsed) {
+            setField('dayLabel')(dayLabelForDate(parsed));
+          }
+        }}
         error={errors.dateLabel}
       />
       <View style={styles.timeRow}>
         <View style={styles.timeField}>
-          <FormField
+          <DateTimeField
             label="Jam mulai"
+            mode="time"
             value={values.startTime}
+            placeholder="Pilih jam"
+            onChange={(date) => setField('startTime')(formatClock(date))}
             onChangeText={setField('startTime')}
-            placeholder="08:00"
-            maxLength={5}
             error={errors.startTime}
           />
         </View>
         <View style={styles.timeField}>
-          <FormField
+          <DateTimeField
             label="Jam selesai"
+            mode="time"
             value={values.endTime}
+            placeholder="Pilih jam"
+            onChange={(date) => setField('endTime')(formatClock(date))}
             onChangeText={setField('endTime')}
-            placeholder="10:00"
-            maxLength={5}
             error={errors.endTime}
           />
         </View>

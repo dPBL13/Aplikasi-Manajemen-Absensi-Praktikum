@@ -3,12 +3,12 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ActionButton } from '@/components/action-button';
+import { Card } from '@/components/card';
 import { FeedbackBanner, type FeedbackMessage } from '@/components/feedback-banner';
 import { FormField } from '@/components/form-field';
 import { ScreenScroll } from '@/components/screen-scroll';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
 import type { UserRole } from '@/types/auth';
@@ -67,10 +67,12 @@ export default function RegisterScreen() {
   return (
     <ScreenScroll>
       <View style={styles.container}>
-        <ThemedView type="backgroundElement" style={styles.card}>
+        <Card style={styles.card}>
           <View style={styles.header}>
-            <ThemedText type="title">Buat Akun Baru</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
+            <ThemedText type="displayMobile" themeColor="onSurface">
+              Buat Akun Baru
+            </ThemedText>
+            <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
               Lengkapi data diri Anda untuk membuat akun di sistem absensi praktikum.
             </ThemedText>
           </View>
@@ -119,51 +121,24 @@ export default function RegisterScreen() {
               autoCapitalize="none"
             />
 
-            {/* Selector Role */}
             <View style={styles.roleContainer}>
-              <ThemedText type="smallBold">Daftar Sebagai Peran:</ThemedText>
+              <ThemedText type="labelSm" themeColor="onSurface">
+                Daftar Sebagai Peran
+              </ThemedText>
               <View style={styles.roleToggle}>
-                <Pressable
+                <RoleOption
+                  label="Praktikan"
+                  selected={role === 'praktikan'}
                   onPress={() => setRole('praktikan')}
-                  style={[
-                    styles.roleButton,
-                    {
-                      borderColor: role === 'praktikan' ? theme.accent : theme.border,
-                      backgroundColor:
-                        role === 'praktikan' ? theme.backgroundSelected : theme.highlight,
-                    },
-                  ]}
-                >
-                  <ThemedText
-                    type="smallBold"
-                    style={{ color: role === 'praktikan' ? theme.accent : theme.text }}
-                  >
-                    Praktikan
-                  </ThemedText>
-                </Pressable>
-
-                <Pressable
+                />
+                <RoleOption
+                  label="Asisten (Asprak)"
+                  selected={role === 'asprak'}
                   onPress={() => setRole('asprak')}
-                  style={[
-                    styles.roleButton,
-                    {
-                      borderColor: role === 'asprak' ? theme.accent : theme.border,
-                      backgroundColor:
-                        role === 'asprak' ? theme.backgroundSelected : theme.highlight,
-                    },
-                  ]}
-                >
-                  <ThemedText
-                    type="smallBold"
-                    style={{ color: role === 'asprak' ? theme.accent : theme.text }}
-                  >
-                    Asisten (Asprak)
-                  </ThemedText>
-                </Pressable>
+                />
               </View>
             </View>
 
-            {/* Input Token Rahasia jika memilih Asprak */}
             {role === 'asprak' && (
               <FormField
                 label="Token Verifikasi Asisten"
@@ -183,8 +158,8 @@ export default function RegisterScreen() {
             />
           </View>
 
-          <View style={styles.footer}>
-            <ThemedText type="small" themeColor="textSecondary">
+          <View style={[styles.footer, { borderTopColor: theme.border }]}>
+            <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
               Sudah memiliki akun?
             </ThemedText>
             <ActionButton
@@ -193,9 +168,43 @@ export default function RegisterScreen() {
               onPress={() => router.back()}
             />
           </View>
-        </ThemedView>
+        </Card>
       </View>
     </ScreenScroll>
+  );
+}
+
+function RoleOption({
+  label,
+  selected,
+  onPress,
+}: {
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  const theme = useTheme();
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      onPress={onPress}
+      style={[
+        styles.roleButton,
+        selected
+          ? { backgroundColor: theme.accent, borderColor: theme.accent }
+          : {
+              backgroundColor: theme.secondarySurface,
+              borderColor: theme.secondaryBorder,
+            },
+      ]}>
+      <ThemedText
+        type="labelLg"
+        style={{ color: selected ? theme.accentText : theme.secondaryText }}>
+        {label}
+      </ThemedText>
+    </Pressable>
   );
 }
 
@@ -205,14 +214,13 @@ const styles = StyleSheet.create({
   },
   card: {
     padding: Spacing.four,
-    borderRadius: Spacing.three,
     gap: Spacing.three,
   },
   header: {
     gap: Spacing.one,
   },
   form: {
-    gap: Spacing.three,
+    gap: Spacing.md,
   },
   roleContainer: {
     gap: Spacing.one,
@@ -223,14 +231,18 @@ const styles = StyleSheet.create({
   },
   roleButton: {
     flex: 1,
+    minHeight: 44,
     paddingVertical: Spacing.two,
-    borderRadius: Spacing.two,
-    borderWidth: 1.5,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radius.md,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   footer: {
     marginTop: Spacing.two,
+    paddingTop: Spacing.md,
+    borderTopWidth: 1,
     gap: Spacing.two,
     alignItems: 'center',
   },

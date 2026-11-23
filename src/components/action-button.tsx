@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, type StyleProp, type ViewStyle } from 'react-nat
 
 import { ThemedText } from './themed-text';
 
-import { Palette, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 type ActionButtonProps = {
@@ -23,12 +23,25 @@ export function ActionButton({
   accessibilityLabel,
 }: ActionButtonProps) {
   const theme = useTheme();
-  const isSecondary = tone === 'secondary';
-  const textColor = isSecondary
-    ? theme.text
-    : tone === 'danger'
-      ? '#ffffff'
-      : theme.accentText;
+
+  const palette =
+    tone === 'secondary'
+      ? {
+          backgroundColor: theme.secondarySurface,
+          borderColor: theme.secondaryBorder,
+          color: theme.secondaryText,
+        }
+      : tone === 'danger'
+        ? {
+            backgroundColor: theme.dangerBackground,
+            borderColor: theme.dangerBorder,
+            color: theme.danger,
+          }
+        : {
+            backgroundColor: theme.accent,
+            borderColor: 'transparent',
+            color: theme.accentText,
+          };
 
   return (
     <Pressable
@@ -39,19 +52,18 @@ export function ActionButton({
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
-        {
-          backgroundColor: isSecondary
-            ? theme.backgroundElement
-            : tone === 'danger'
-              ? Palette.danger
-              : theme.accent,
-          borderColor: isSecondary ? theme.border : 'transparent',
-        },
+        disabled
+          ? {
+              backgroundColor: theme.disabled,
+              borderColor: theme.border,
+            }
+          : palette,
         pressed && !disabled && styles.pressed,
-        disabled && styles.disabled,
         style,
       ]}>
-      <ThemedText type="smallBold" style={[styles.label, { color: textColor }]}>
+      <ThemedText
+        type="labelLg"
+        style={[styles.label, { color: disabled ? theme.onDisabled : palette.color }]}>
         {label}
       </ThemedText>
     </Pressable>
@@ -61,9 +73,9 @@ export function ActionButton({
 const styles = StyleSheet.create({
   button: {
     minHeight: 44,
-    paddingVertical: Spacing.two + 2,
+    paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.three,
-    borderRadius: Spacing.two,
+    borderRadius: Radius.md,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -72,9 +84,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   pressed: {
-    opacity: 0.72,
-  },
-  disabled: {
-    opacity: 0.45,
+    opacity: 0.8,
   },
 });

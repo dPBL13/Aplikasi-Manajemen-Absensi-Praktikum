@@ -1,17 +1,11 @@
 import {
   createUserWithEmailAndPassword,
+  getIdToken,
   signInWithEmailAndPassword,
   signOut,
+  updateProfile,
 } from '@react-native-firebase/auth';
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  setDoc,
-  where,
-} from '@react-native-firebase/firestore';
+import { doc, getDoc, setDoc } from '@react-native-firebase/firestore';
 
 import type { RegisterInput, UserProfile } from '@/types/auth';
 import { getFirebaseErrorMessage } from '@/utils/error-handler';
@@ -31,6 +25,33 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   }
 }
 
+/**
+ * Menyimpan profil ke Firestore dengan beberapa kali percobaan.
+ * Setelah `createUserWithEmailAndPassword`, token Auth kadang belum
+ * terpropagasi ke Firestore sehingga write pertama ditolak. Retry singkat
+ * membuat profil tetap tersimpan dan mencegah akun "lokal saja".
+ */
+async function saveProfileWithRetry(
+  uid: string,
+  profile: UserProfile,
+  attempts = 3
+): Promise<void> {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      await setDoc(doc(firestore, 'users', uid), profile, { merge: true });
+      return;
+    } catch (error) {
+      lastError = error;
+      console.warn(`[auth-service] Gagal menyimpan profil (percobaan ${attempt + 1}):`, error);
+      await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)));
+    }
+  }
+
+  throw lastError;
+}
+
 export async function registerUser(
   input: RegisterInput
 ): Promise<{ ok: true; profile: UserProfile } | { ok: false; reason: string }> {
@@ -48,6 +69,12 @@ export async function registerUser(
     );
 
     const uid = cred.user.uid;
+
+    // Pastikan token Auth sudah aktif sebelum menulis ke Firestore, dan simpan
+    // nama di Auth agar profil bisa dipulihkan bila dokumen Firestore hilang.
+    await updateProfile(cred.user, { displayName: input.name.trim() }).catch(() => undefined);
+    await getIdToken(cred.user, true).catch(() => undefined);
+
     const profile: UserProfile = {
       uid,
       name: input.name.trim(),
@@ -57,7 +84,7 @@ export async function registerUser(
       createdAt: new Date().toISOString(),
     };
 
-    await setDoc(doc(firestore, 'users', uid), profile);
+    await saveProfileWithRetry(uid, profile);
     return { ok: true, profile };
   } catch (error: any) {
     return { ok: false, reason: getFirebaseErrorMessage(error) };
@@ -69,19 +96,17 @@ export async function loginUser(
   password: string
 ): Promise<{ ok: true; profile: UserProfile } | { ok: false; reason: string }> {
   try {
-    let targetEmail = emailOrNim.trim();
+    const targetEmail = emailOrNim.trim();
 
-    // Jika pengguna memasukkan NIM (14 digit) alih-alih email, cari email-nya di Firestore
-    if (/^\d{14}$/.test(targetEmail)) {
-      const q = query(
-        collection(firestore, 'users'),
-        where('nim', '==', targetEmail)
-      );
-      const querySnap = await getDocs(q);
-      if (!querySnap.empty) {
-        const userData = querySnap.docs[0].data() as UserProfile;
-        targetEmail = userData.email;
-      }
+    // Firestore rules require authentication to read the users collection, so
+    // NIM -> email lookup cannot run before sign-in. Require the registered email
+    // instead of failing deep inside the SDK with a raw permission-denied error.
+    if (/^\d+$/.test(targetEmail)) {
+      return {
+        ok: false,
+        reason:
+          'Login dengan NIM belum tersedia. Masukkan email yang Anda gunakan saat mendaftar.',
+      };
     }
 
     const cred = await signInWithEmailAndPassword(firebaseAuth, targetEmail, password);

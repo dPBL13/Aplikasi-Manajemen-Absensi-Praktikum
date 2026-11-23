@@ -3,72 +3,85 @@ import { StyleSheet, View } from 'react-native';
 import { ThemedText } from './themed-text';
 
 import { PERMIT_CATEGORY_LABEL, PERMIT_STATUS_LABEL, SESSION_STATUS_LABEL } from '@/constants/labels';
-import { Palette } from '@/constants/theme';
+import { Palette, Radius, Spacing } from '@/constants/theme';
 import type { PermitCategory, PermitStatus, SessionStatus } from '@/types/domain';
 
 type StatusMeta = {
   label: string;
   color: string;
   backgroundColor: string;
+  borderColor?: string;
 };
 
 const SESSION_STATUS_META: Record<SessionStatus, StatusMeta> = {
   'belum-dibuka': {
     label: SESSION_STATUS_LABEL['belum-dibuka'],
-    color: Palette.inkSoft,
-    backgroundColor: Palette.lime,
+    color: Palette.textPrimary,
+    backgroundColor: Palette.statusPending,
+    borderColor: Palette.mossPrimary,
   },
   berlangsung: {
     label: SESSION_STATUS_LABEL.berlangsung,
-    color: Palette.link,
-    backgroundColor: Palette.mint,
+    color: Palette.textOnDark,
+    backgroundColor: Palette.statusActive,
   },
   selesai: {
     label: SESSION_STATUS_LABEL.selesai,
-    color: Palette.inkSoft,
-    backgroundColor: Palette.button,
+    color: Palette.textPrimary,
+    backgroundColor: Palette.statusCompleted,
   },
 };
 
 const PERMIT_STATUS_META: Record<PermitStatus, StatusMeta> = {
   menunggu: {
     label: PERMIT_STATUS_LABEL.menunggu,
-    color: Palette.inkSoft,
-    backgroundColor: Palette.lime,
+    color: Palette.textPrimary,
+    backgroundColor: Palette.statusPending,
+    borderColor: Palette.mossPrimary,
   },
   diterima: {
     label: PERMIT_STATUS_LABEL.diterima,
-    color: Palette.link,
-    backgroundColor: Palette.mint,
+    color: Palette.textOnDark,
+    backgroundColor: Palette.statusActive,
   },
   ditolak: {
     label: PERMIT_STATUS_LABEL.ditolak,
-    color: Palette.danger,
-    backgroundColor: Palette.dangerSurface,
+    color: Palette.onStatusAlert,
+    backgroundColor: Palette.statusAlert,
+    borderColor: Palette.alertBorder,
   },
 };
 
+const CATEGORY_NEUTRAL: StatusMeta = {
+  label: '',
+  color: Palette.textPrimary,
+  backgroundColor: Palette.mossCanvas,
+};
+
 const PERMIT_CATEGORY_META: Record<PermitCategory, StatusMeta> = {
-  sakit: { label: PERMIT_CATEGORY_LABEL.sakit, color: Palette.link, backgroundColor: Palette.mint },
+  sakit: {
+    label: PERMIT_CATEGORY_LABEL.sakit,
+    color: Palette.onStatusAlert,
+    backgroundColor: Palette.statusAlert,
+    borderColor: Palette.alertBorder,
+  },
   'acara-kampus': {
+    ...CATEGORY_NEUTRAL,
     label: PERMIT_CATEGORY_LABEL['acara-kampus'],
-    color: Palette.inkSoft,
-    backgroundColor: Palette.button,
   },
   keluarga: {
+    ...CATEGORY_NEUTRAL,
     label: PERMIT_CATEGORY_LABEL.keluarga,
-    color: Palette.link,
-    backgroundColor: Palette.mint,
   },
   lainnya: {
+    ...CATEGORY_NEUTRAL,
     label: PERMIT_CATEGORY_LABEL.lainnya,
-    color: Palette.inkSoft,
-    backgroundColor: Palette.button,
   },
   'belum-diklasifikasi': {
     label: PERMIT_CATEGORY_LABEL['belum-diklasifikasi'],
-    color: Palette.inkSoft,
-    backgroundColor: Palette.surface,
+    color: Palette.textPrimary,
+    backgroundColor: Palette.mossSurfaceElevated,
+    borderColor: Palette.mossPrimary,
   },
 };
 
@@ -86,10 +99,20 @@ export function PermitCategoryBadge({ category }: { category: PermitCategory }) 
 
 export function AttendanceBadge({ attended }: { attended: boolean }) {
   return (
-    <View style={[styles.badge, attended ? styles.attended : styles.absent]}>
+    <View
+      style={[
+        styles.badge,
+        attended
+          ? { backgroundColor: Palette.statusActive }
+          : {
+              backgroundColor: Palette.statusAlert,
+              borderWidth: 1,
+              borderColor: Palette.alertBorder,
+            },
+      ]}>
       <ThemedText
-        type="smallBold"
-        style={[styles.badgeText, attended ? styles.attendedText : styles.absentText]}>
+        type="labelSm"
+        style={{ color: attended ? Palette.textOnDark : Palette.onStatusAlert }}>
         {attended ? 'Hadir' : 'Belum Hadir'}
       </ThemedText>
     </View>
@@ -98,8 +121,16 @@ export function AttendanceBadge({ attended }: { attended: boolean }) {
 
 function Badge({ meta }: { meta: StatusMeta }) {
   return (
-    <View style={[styles.badge, { backgroundColor: meta.backgroundColor }]}>
-      <ThemedText type="smallBold" style={[styles.badgeText, { color: meta.color }]}>
+    <View
+      style={[
+        styles.badge,
+        {
+          backgroundColor: meta.backgroundColor,
+          borderWidth: meta.borderColor ? 1 : 0,
+          borderColor: meta.borderColor,
+        },
+      ]}>
+      <ThemedText type="labelSm" style={{ color: meta.color }}>
         {meta.label}
       </ThemedText>
     </View>
@@ -108,25 +139,9 @@ function Badge({ meta }: { meta: StatusMeta }) {
 
 const styles = StyleSheet.create({
   badge: {
-    paddingVertical: 3,
-    paddingHorizontal: 10,
-    borderRadius: 999,
+    paddingVertical: Spacing.one,
+    paddingHorizontal: Spacing.two,
+    borderRadius: Radius.full,
     alignSelf: 'flex-start',
-  },
-  badgeText: {
-    fontSize: 12,
-    lineHeight: 16,
-  },
-  attended: {
-    backgroundColor: Palette.mint,
-  },
-  absent: {
-    backgroundColor: Palette.dangerSurface,
-  },
-  attendedText: {
-    color: Palette.link,
-  },
-  absentText: {
-    color: Palette.danger,
   },
 });

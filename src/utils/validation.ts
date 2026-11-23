@@ -8,6 +8,7 @@ export const validateReason = (reason: string): { ok: boolean; message?: string 
   return { ok: true };
 };
 
+const DEFAULT_ASPRAK_TOKEN =
   process.env.EXPO_PUBLIC_ASPRAK_SECRET_TOKEN || 'ASPRAK2026';
 
 export const validateNIM = (nim: string): boolean => {

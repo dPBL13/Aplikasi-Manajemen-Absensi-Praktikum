@@ -1,8 +1,9 @@
+import { StyleSheet, View } from 'react-native';
+
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { PermitCategory } from '@/types/domain';
-import { StyleSheet } from 'react-native';
 
 const LABEL: Record<PermitCategory, string> = {
   sakit: 'Sakit',
@@ -23,22 +24,30 @@ export function AICard({ category, confidence, model }: AICardProps) {
   const pct = confidence == null ? null : Math.round(confidence * 100);
 
   return (
-    <ThemedView type="backgroundElement" style={[styles.card, { borderColor: theme.border }]}>
-      <ThemedText style={styles.title}>Prediksi AI (informasi pendukung)</ThemedText>
-      <ThemedText>
+    <View style={[styles.card, { backgroundColor: theme.surfaceAlt }]}>
+      <ThemedText type="labelSm" themeColor="onSurface">
+        Prediksi AI (informasi pendukung)
+      </ThemedText>
+      <ThemedText type="bodySm" themeColor="onSurface">
         Kategori: {LABEL[category]}
         {pct != null ? ` · ${pct}%` : ''}
       </ThemedText>
-      {model ? <ThemedText style={styles.small}>Model: {model}</ThemedText> : null}
-      <ThemedText style={styles.small}>
+      {model ? (
+        <ThemedText type="monoSm" themeColor="onSurfaceSecondary">
+          Model: {model}
+        </ThemedText>
+      ) : null}
+      <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
         Hasil ini hanya prediksi. Keputusan izin ada pada asisten.
       </ThemedText>
-    </ThemedView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { padding: 12, borderRadius: 12, borderWidth: 1, gap: 4 },
-  title: { fontWeight: '700' },
-  small: { fontSize: 12, opacity: 0.7 },
+  card: {
+    padding: Spacing.three,
+    borderRadius: Radius.md,
+    gap: Spacing.one,
+  },
 });

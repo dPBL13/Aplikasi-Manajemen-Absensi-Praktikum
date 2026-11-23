@@ -10,13 +10,13 @@ type InfoRowProps = {
   valueType?: ThemedTextProps['type'];
 };
 
-export function InfoRow({ label, value, valueType = 'small' }: InfoRowProps) {
+export function InfoRow({ label, value, valueType = 'bodySm' }: InfoRowProps) {
   return (
     <View style={styles.row}>
-      <ThemedText type="small" themeColor="textSecondary" style={styles.label}>
+      <ThemedText type="bodySm" themeColor="onSurfaceSecondary" style={styles.label}>
         {label}
       </ThemedText>
-      <ThemedText type={valueType} style={styles.value}>
+      <ThemedText type={valueType} themeColor="onSurface" style={styles.value}>
         {value}
       </ThemedText>
     </View>

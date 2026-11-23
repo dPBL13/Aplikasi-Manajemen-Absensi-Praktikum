@@ -4,7 +4,7 @@ import { ActionButton } from './action-button';
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
 
-import { Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 
 type EmptyStateProps = {
   title: string;
@@ -17,9 +17,11 @@ type EmptyStateProps = {
 export function EmptyState({ title, hint, actionLabel, onAction }: EmptyStateProps) {
   return (
     <ThemedView type="surfaceAlt" style={styles.container}>
-      <ThemedText type="smallBold">{title}</ThemedText>
+      <ThemedText type="titleMd" themeColor="onSurfaceAlt">
+        {title}
+      </ThemedText>
       {hint ? (
-        <ThemedText type="small" themeColor="textSecondary">
+        <ThemedText type="bodySm" themeColor="onSurfaceSecondary">
           {hint}
         </ThemedText>
       ) : null}
@@ -33,7 +35,7 @@ export function EmptyState({ title, hint, actionLabel, onAction }: EmptyStatePro
 const styles = StyleSheet.create({
   container: {
     padding: Spacing.four,
-    borderRadius: Spacing.three,
+    borderRadius: Radius.lg,
     gap: Spacing.two,
   },
 });
