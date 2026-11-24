@@ -26,6 +26,11 @@ service cloud.firestore {
       allow create: if isAuthenticated() && request.auth.uid == userId;
       allow update: if isAuthenticated() && (request.auth.uid == userId || isAsprak());
       allow delete: if isAsprak();
+      
+      // Token FCM perangkat (BR-09): hanya pemilik akun yang boleh baca/tulis.
+      match /fcmTokens/{tokenId} {
+        allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      }
     }
 
     // Koleksi Kelas Praktikum (FR-05)
