@@ -2,6 +2,7 @@ import { onAuthStateChanged } from '@react-native-firebase/auth';
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
   onSnapshot,
   runTransaction,
@@ -10,7 +11,7 @@ import {
   writeBatch,
 } from '@react-native-firebase/firestore';
 
-import { CURRENT_ASPRAK_NAME, CURRENT_PRACTIKAN_ID } from '@/data/current-user';
+// import { CURRENT_PRACTIKAN_ID } from '@/data/current-user'; // data Seeder, bukan asli
 import { seedClasses, seedPermits, seedSessions } from '@/data/seed';
 import type {
   AppData,
@@ -41,6 +42,7 @@ import {
 
 const FAIL = (reason: string): MutationResult => ({ ok: false, reason });
 const SUCCESS: MutationResult = { ok: true };
+
 
 /**
  * Firestore menolak semua penulisan tanpa autentikasi. Tanpa guard ini,
@@ -254,13 +256,29 @@ export const firestoreDataService: DataService = {
     }
 
     const id = generateId('cls');
+
+    const currentUser = firebaseAuth.currentUser;
+    let resolvedAsprakName = currentUser?.displayName?.trim() || '';
+
+    if (currentUser?.uid) {
+      const userSnap = await getDoc(doc(firestore, 'users', currentUser.uid));
+      const profileName = (userSnap.data()?.name as string | undefined)?.trim();
+      if (profileName) {
+        resolvedAsprakName = profileName;
+      }
+    }
+
+    if (!resolvedAsprakName) {
+      return FAIL('Nama asisten praktikum tidak ditemukan pada profil akun.');
+    }
+
     const newClass: PracticumClass = {
       id,
       courseName: input.courseName.trim(),
       code: input.code.trim().toUpperCase(),
       classGroup: input.classGroup.trim(),
       room: input.room.trim(),
-      asprakName: CURRENT_ASPRAK_NAME,
+      asprakName: resolvedAsprakName,
       description: input.description?.trim() || undefined,
       createdAt: new Date().toISOString(),
       participants: [],
@@ -703,11 +721,15 @@ export const firestoreDataService: DataService = {
 
     // Identifikasi mahasiswa yang mengajukan. Akun Firebase Auth memakai uid,
     // sedangkan roster memakai Participant.id — cocokkan juga lewat NIM.
-    const requestedId = input.participantId || CURRENT_PRACTIKAN_ID;
+    const requestedId = input.participantId || '';
     const participant =
       session.participants.find((p) => p.id === requestedId) ??
       (input.nim ? session.participants.find((p) => p.nim === input.nim) : undefined);
     const participantId = participant?.id ?? requestedId;
+    //new add, validation
+    if (!participantId) {
+      return FAIL('Identitas praktikan tidak ditemukan.');
+}
 
     const participantName = input.participantName || participant?.name || 'Praktikan';
     const nim = input.nim || participant?.nim || '24060124120000';

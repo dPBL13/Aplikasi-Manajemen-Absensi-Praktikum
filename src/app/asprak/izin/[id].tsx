@@ -11,7 +11,7 @@ import { ScreenScroll } from '@/components/screen-scroll';
 import { PermitCategoryBadge, PermitStatusBadge } from '@/components/status-badge';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing, Typography } from '@/constants/theme';
-import { CURRENT_ASPRAK_NAME } from '@/data/current-user';
+import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { dataService, useAppData } from '@/services';
 import { findPermit, findSession } from '@/services/selectors';
@@ -32,6 +32,8 @@ export default function PermitDetailScreen() {
 
   const permit = findPermit(data, id);
   const session = permit ? findSession(data, permit.sessionId) : undefined;
+
+  const { userProfile } = useAuth();
 
   useEffect(() => {
     if (!feedback) {
@@ -72,7 +74,7 @@ export default function PermitDetailScreen() {
     const result = await dataService.decidePermit(permit.id, {
       status: decision,
       note,
-      decidedBy: CURRENT_ASPRAK_NAME,
+      decidedBy: userProfile?.name?.trim() || 'Asprak',
     });
     setBusy(false);
     setDecision(null);
