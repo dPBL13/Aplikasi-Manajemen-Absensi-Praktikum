@@ -121,6 +121,10 @@ export default function RecapScreen() {
                 {item.endTime}
               </ThemedText>
 
+              <ThemedText type="labelSm" style={{ color: theme.accent }}>
+                📍 {item.room} (Radius Geofence: {item.radius ?? 50}m)
+              </ThemedText>
+
               <View style={[styles.bar, { backgroundColor: theme.surfaceAlt }]}>
                 <View
                   style={[

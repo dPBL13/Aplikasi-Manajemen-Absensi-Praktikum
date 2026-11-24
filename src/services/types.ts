@@ -80,6 +80,11 @@ export interface DataService {
   // FR-10 / FR-11 — presensi praktikan
   checkIn(sessionId: string, participantId: string): Promise<MutationResult>;
 
+  // FR-28 (Sprint 3, HF-03) — presensi tervalidasi radius geofencing & metadata audit
+  checkInWithLocation?(
+    input: import('./attendance-location').CheckInLocationInput,
+  ): Promise<import('./attendance-location').CheckInLocationResult>;
+
   // FR-16 s/d FR-18 — pengajuan izin praktikan & klasifikasi AI
   submitPermit?(input: SubmitPermitInput): Promise<MutationResult & { permit?: import('@/types/domain').Permit }>;
 

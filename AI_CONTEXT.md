@@ -163,6 +163,7 @@ interface DataService {
   closeSession(id, note?): Promise<MutationResult>;
 
   checkIn(sessionId, participantId): Promise<MutationResult>;
+  checkInWithLocation?(input): Promise<CheckInLocationResult>;
   decidePermit(id, decision): Promise<MutationResult>;
 }
 ```
@@ -256,12 +257,14 @@ Implemented in `src/services/mock/index.ts`; replicate them in any new adapter.
 | `/asprak/kelas/:id` | Detail/edit kelas + peserta | Asprak |
 | `/asprak/session/baru` | Jadwal baru | Asprak |
 | `/asprak/session/:id` | Detail sesi (buka/tutup/ubah/hapus, kehadiran, rekap) | Asprak |
+| `/asprak/session/qr` | Generator QR Code sesi presensi (FR-34) | Asprak |
 | `/asprak/rekap` | Rekap kehadiran | Asprak |
 | `/asprak/izin` | Daftar pengajuan izin | Asprak |
 | `/asprak/izin/:id` | Detail izin + keputusan | Asprak |
 | `/praktikan` | Daftar sesi | Praktikan |
 | `/praktikan/riwayat` | Riwayat kehadiran | Praktikan |
 | `/praktikan/session/:id` | Detail sesi + presensi | Praktikan |
+| `/praktikan/presensi/:sessionId` | Halaman presensi mandiri geofencing (FR-27) | Praktikan |
 
 Navigation notes:
 

@@ -62,6 +62,12 @@ export interface Participant {
 export interface SessionParticipant extends Participant {
   /** Jam presensi format 24 jam, contoh: "08:12". */
   checkInAt?: string;
+  /** Jarak ke laboratorium dalam meter saat presensi (Sprint 3 audit). */
+  distanceMeters?: number;
+  /** Metode verifikasi presensi (Sprint 3 audit). */
+  verificationMethod?: AttendanceVerificationMethod;
+  /** Status validasi radius (Sprint 3 audit). */
+  isWithinRadius?: boolean;
 }
 
 /** Sesi praktikum (FR-07, FR-08). */
@@ -87,6 +93,65 @@ export interface PracticumSession {
   closingNote?: string;
   /** Salinan daftar peserta kelas + jam presensi pada sesi ini. */
   participants: SessionParticipant[];
+  /** Referensi ID laboratorium (Sprint 3). */
+  laboratoryId?: string;
+  /** Titik koordinat latitude laboratorium (Sprint 3). */
+  latitude?: number;
+  /** Titik koordinat longitude laboratorium (Sprint 3). */
+  longitude?: number;
+  /** Radius toleransi geofencing dalam meter (Sprint 3, default: 50). */
+  radius?: number;
+  /** Rahasia/token QR Code dinamis sesi untuk presensi alternatif (Sprint 3, FR-34). */
+  qrCodeSecret?: string;
+}
+
+/** Data laboratorium komputer (Sprint 3, FR-29). */
+export interface Laboratory {
+  id: string;
+  name: string;
+  code: string;
+  building: string;
+  latitude: number;
+  longitude: number;
+  radius: number;
+  capacity?: number;
+  description?: string;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
+/** Koordinat geofence untuk kalkulasi jarak (Sprint 3, FR-28). */
+export interface GeofenceCoordinate {
+  latitude: number;
+  longitude: number;
+}
+
+/** Hasil validasi geofence (Sprint 3, FR-28). */
+export interface GeofenceValidationResult {
+  distanceMeters: number;
+  isWithinRadius: boolean;
+  accuracy: number;
+  isMocked: boolean;
+}
+
+/** Metode verifikasi presensi. */
+export type AttendanceVerificationMethod = 'geofence' | 'qr_geofence' | 'manual';
+
+/** Rekaman audit presensi berbasis lokasi (Sprint 3, BR-05, FR-28). */
+export interface AttendanceAuditRecord {
+  id?: string;
+  sessionId: string;
+  participantId: string;
+  nim: string;
+  name: string;
+  checkInAt: string;
+  status: 'hadir';
+  latitude: number;
+  longitude: number;
+  distanceMeters: number;
+  isWithinRadius: boolean;
+  verificationMethod: AttendanceVerificationMethod;
+  deviceInfo?: string;
 }
 
 /** Pengajuan izin praktikan + hasil klasifikasi AI (FR-16 – FR-21). */
@@ -119,4 +184,6 @@ export interface AppData {
   classes: PracticumClass[];
   sessions: PracticumSession[];
   permits: Permit[];
+  laboratories?: Laboratory[];
+  attendanceAudits?: Record<string, AttendanceAuditRecord[]>;
 }

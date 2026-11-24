@@ -3,6 +3,11 @@ import { commit, createId, getSnapshot, subscribe } from './store';
 import { CURRENT_ASPRAK_NAME, CURRENT_PRACTIKAN_ID } from '@/data/current-user';
 import type { PracticumClass, PracticumSession, SessionParticipant } from '@/types/domain';
 import { formatClock } from '@/utils/format-clock';
+import {
+  type CheckInLocationInput,
+  type CheckInLocationResult,
+  validateCheckInLocation,
+} from '../attendance-location';
 import type { ClassInput, DataService, MutationResult, SessionInput } from '../types';
 import {
   hasErrors,
@@ -403,6 +408,58 @@ export const mockDataService: DataService = {
     });
 
     return { ok: true };
+  },
+
+  async checkInWithLocation(input: CheckInLocationInput): Promise<CheckInLocationResult> {
+    const state = getSnapshot();
+    const session = state.sessions.find((item) => item.id === input.sessionId);
+
+    if (!session) {
+      return FAIL('Sesi tidak ditemukan.');
+    }
+
+    const participant =
+      session.participants.find((item) => item.id === input.participantId) ||
+      (input.nim ? session.participants.find((item) => item.nim === input.nim) : undefined);
+
+    const validation = validateCheckInLocation(session, participant, input);
+    if (!validation.valid || !validation.audit) {
+      return FAIL(validation.reason || 'Gagal memvalidasi lokasi presensi.');
+    }
+
+    const nowClock = formatClock();
+    const targetParticipantId = participant!.id;
+
+    commit({
+      ...state,
+      sessions: state.sessions.map((item) =>
+        item.id === input.sessionId
+          ? {
+              ...item,
+              participants: item.participants.map((entry) =>
+                entry.id === targetParticipantId
+                  ? {
+                      ...entry,
+                      checkInAt: nowClock,
+                      distanceMeters: validation.audit!.distanceMeters,
+                      verificationMethod: validation.audit!.verificationMethod,
+                      isWithinRadius: true,
+                    }
+                  : entry,
+              ),
+            }
+          : item,
+      ),
+      attendanceAudits: {
+        ...(state.attendanceAudits || {}),
+        [input.sessionId]: [
+          ...((state.attendanceAudits && state.attendanceAudits[input.sessionId]) || []),
+          validation.audit,
+        ],
+      },
+    });
+
+    return { ok: true, audit: validation.audit };
   },
 
   async submitPermit(input) {

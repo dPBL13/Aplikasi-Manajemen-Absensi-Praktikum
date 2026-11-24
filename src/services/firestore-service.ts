@@ -14,6 +14,7 @@ import { CURRENT_ASPRAK_NAME, CURRENT_PRACTIKAN_ID } from '@/data/current-user';
 import { seedClasses, seedPermits, seedSessions } from '@/data/seed';
 import type {
   AppData,
+  AttendanceAuditRecord,
   Participant,
   Permit,
   PracticumClass,
@@ -21,7 +22,12 @@ import type {
   SessionParticipant,
 } from '@/types/domain';
 import { formatClock } from '@/utils/format-clock';
-import { firebaseAuth, firestore } from './firebase/config';
+import {
+  type CheckInLocationInput,
+  type CheckInLocationResult,
+  validateCheckInLocation,
+} from './attendance-location';
+import { getFirebaseAuth, getFirebaseFirestore } from './firebase/config';
 import { classifyLeaveReason } from './gemini-service';
 import type {
   ClassInput,
@@ -49,7 +55,7 @@ const SUCCESS: MutationResult = { ok: true };
  * daripada memberi ilusi "tersimpan".
  */
 function requireAuth(): MutationResult | null {
-  if (!firebaseAuth.currentUser) {
+  if (!getFirebaseAuth().currentUser) {
     return FAIL(
       'Anda belum masuk. Silakan login terlebih dahulu agar perubahan tersimpan ke server.',
     );
@@ -117,7 +123,7 @@ async function bootstrapFirestore() {
     let snapshot;
 
     try {
-      snapshot = await getDocs(collection(firestore, 'classes'));
+      snapshot = await getDocs(collection(getFirebaseFirestore(), 'classes'));
     } catch (err) {
       loadSeedFallback(err);
       return;
@@ -129,7 +135,7 @@ async function bootstrapFirestore() {
 
     // Seeding membutuhkan user terautentikasi (aturan Firestore menolak write
     // anonim). Jangan mencoba menulis sebelum login.
-    if (!firebaseAuth.currentUser) {
+    if (!getFirebaseAuth().currentUser) {
       console.log('[firestore-service] Lewati seeding: pengguna belum masuk.');
       return;
     }
@@ -138,15 +144,15 @@ async function bootstrapFirestore() {
     console.log('[firestore-service] Firestore masih kosong, memuat data awal (seeding)...');
 
     try {
-      const batch = writeBatch(firestore);
+      const batch = writeBatch(getFirebaseFirestore());
       seedClasses.forEach((cls: PracticumClass) => {
-        batch.set(doc(firestore, 'classes', cls.id), cls);
+        batch.set(doc(getFirebaseFirestore(), 'classes', cls.id), cls);
       });
       seedSessions.forEach((ses: PracticumSession) => {
-        batch.set(doc(firestore, 'sessions', ses.id), ses);
+        batch.set(doc(getFirebaseFirestore(), 'sessions', ses.id), ses);
       });
       seedPermits.forEach((per: Permit) => {
-        batch.set(doc(firestore, 'permits', per.id), per);
+        batch.set(doc(getFirebaseFirestore(), 'permits', per.id), per);
       });
       await batch.commit();
     } catch (err) {
@@ -158,22 +164,22 @@ async function bootstrapFirestore() {
 }
 
 /**
- * Menginisialisasi listener Firestore untuk koleksi classes, sessions, dan permits.
+ * Menginisialisasi listener getFirebaseFirestore() untuk koleksi classes, sessions, dan permits.
  */
 function initFirestoreSync() {
   if (isSubscribed) return;
   isSubscribed = true;
 
-  const classesRef = collection(firestore, 'classes');
-  const sessionsRef = collection(firestore, 'sessions');
-  const permitsRef = collection(firestore, 'permits');
+  const classesRef = collection(getFirebaseFirestore(), 'classes');
+  const sessionsRef = collection(getFirebaseFirestore(), 'sessions');
+  const permitsRef = collection(getFirebaseFirestore(), 'permits');
 
   void bootstrapFirestore();
 
-  // Setelah login (mis. dari mode demo), coba seeding lagi bila Firestore
+  // Setelah login (mis. dari mode demo), coba seeding lagi bila getFirebaseFirestore()
   // masih kosong. Tanpa ini, seeding pertama yang dilewati karena belum
   // terautentikasi tidak akan pernah diulang.
-  const unsubAuth = onAuthStateChanged(firebaseAuth, (user) => {
+  const unsubAuth = onAuthStateChanged(getFirebaseAuth(), (user) => {
     if (user) {
       void bootstrapFirestore();
     }
@@ -267,7 +273,7 @@ export const firestoreDataService: DataService = {
     };
 
     try {
-      await setDoc(doc(firestore, 'classes', id), newClass);
+      await setDoc(doc(getFirebaseFirestore(), 'classes', id), newClass);
       return { ok: true, id };
     } catch (err: any) {
       return FAIL(err?.message || 'Gagal membuat kelas.');
@@ -293,13 +299,13 @@ export const firestoreDataService: DataService = {
         description: input.description?.trim() || undefined,
       };
 
-      await updateDoc(doc(firestore, 'classes', id), updatedClass);
+      await updateDoc(doc(getFirebaseFirestore(), 'classes', id), updatedClass);
 
       // Perbarui denormalisasi pada sesi terkait
-      const batch = writeBatch(firestore);
+      const batch = writeBatch(getFirebaseFirestore());
       const relatedSessions = cachedData.sessions.filter((s) => s.classId === id);
       relatedSessions.forEach((s) => {
-        batch.update(doc(firestore, 'sessions', s.id), {
+        batch.update(doc(getFirebaseFirestore(), 'sessions', s.id), {
           courseName: input.courseName.trim(),
           classGroup: input.classGroup.trim(),
         });
@@ -320,16 +326,16 @@ export const firestoreDataService: DataService = {
     if (!existing) return FAIL('Kelas tidak ditemukan.');
 
     try {
-      const batch = writeBatch(firestore);
-      batch.delete(doc(firestore, 'classes', id));
+      const batch = writeBatch(getFirebaseFirestore());
+      batch.delete(doc(getFirebaseFirestore(), 'classes', id));
 
       // Hapus sesi terkait
       const relatedSessions = cachedData.sessions.filter((s) => s.classId === id);
-      relatedSessions.forEach((s) => batch.delete(doc(firestore, 'sessions', s.id)));
+      relatedSessions.forEach((s) => batch.delete(doc(getFirebaseFirestore(), 'sessions', s.id)));
 
       // Hapus izin terkait
       const relatedPermits = cachedData.permits.filter((p) => p.classId === id);
-      relatedPermits.forEach((p) => batch.delete(doc(firestore, 'permits', p.id)));
+      relatedPermits.forEach((p) => batch.delete(doc(getFirebaseFirestore(), 'permits', p.id)));
 
       await batch.commit();
       return SUCCESS;
@@ -360,8 +366,8 @@ export const firestoreDataService: DataService = {
     try {
       // Transaksi menjaga roster kelas dan salinan peserta di tiap sesi tetap
       // konsisten walau dua perangkat menambah peserta bersamaan.
-      await runTransaction(firestore, async (transaction) => {
-        const classRef = doc(firestore, 'classes', classId);
+      await runTransaction(getFirebaseFirestore(), async (transaction) => {
+        const classRef = doc(getFirebaseFirestore(), 'classes', classId);
         const classSnap = await transaction.get(classRef);
         if (!classSnap.exists()) {
           throw new Error('Kelas tidak ditemukan.');
@@ -375,7 +381,7 @@ export const firestoreDataService: DataService = {
         // Semua read harus selesai sebelum write pertama.
         const sessionSnaps = [];
         for (const sessionId of sessionIds) {
-          sessionSnaps.push(await transaction.get(doc(firestore, 'sessions', sessionId)));
+          sessionSnaps.push(await transaction.get(doc(getFirebaseFirestore(), 'sessions', sessionId)));
         }
 
         transaction.update(classRef, {
@@ -416,8 +422,8 @@ export const firestoreDataService: DataService = {
       .map((permit) => permit.id);
 
     try {
-      await runTransaction(firestore, async (transaction) => {
-        const classRef = doc(firestore, 'classes', classId);
+      await runTransaction(getFirebaseFirestore(), async (transaction) => {
+        const classRef = doc(getFirebaseFirestore(), 'classes', classId);
         const classSnap = await transaction.get(classRef);
         if (!classSnap.exists()) {
           throw new Error('Kelas tidak ditemukan.');
@@ -439,12 +445,12 @@ export const firestoreDataService: DataService = {
         // Semua read harus selesai sebelum write pertama.
         const sessionSnaps = [];
         for (const sessionId of sessionIds) {
-          sessionSnaps.push(await transaction.get(doc(firestore, 'sessions', sessionId)));
+          sessionSnaps.push(await transaction.get(doc(getFirebaseFirestore(), 'sessions', sessionId)));
         }
 
         const permitSnaps = [];
         for (const permitId of permitIds) {
-          permitSnaps.push(await transaction.get(doc(firestore, 'permits', permitId)));
+          permitSnaps.push(await transaction.get(doc(getFirebaseFirestore(), 'permits', permitId)));
         }
 
         transaction.update(classRef, {
@@ -507,7 +513,7 @@ export const firestoreDataService: DataService = {
     };
 
     try {
-      await setDoc(doc(firestore, 'sessions', id), newSession);
+      await setDoc(doc(getFirebaseFirestore(), 'sessions', id), newSession);
       return { ok: true, id };
     } catch (err: any) {
       return FAIL(err?.message || 'Gagal membuat sesi.');
@@ -537,7 +543,7 @@ export const firestoreDataService: DataService = {
         room: input.room?.trim() || existing.room,
       };
 
-      await updateDoc(doc(firestore, 'sessions', id), updated);
+      await updateDoc(doc(getFirebaseFirestore(), 'sessions', id), updated);
       return SUCCESS;
     } catch (err: any) {
       return FAIL(err?.message || 'Gagal memperbarui sesi.');
@@ -556,13 +562,13 @@ export const firestoreDataService: DataService = {
     }
 
     try {
-      const batch = writeBatch(firestore);
-      batch.delete(doc(firestore, 'sessions', id));
+      const batch = writeBatch(getFirebaseFirestore());
+      batch.delete(doc(getFirebaseFirestore(), 'sessions', id));
 
       // Cascade: hapus pengajuan izin yang menempel pada sesi ini.
       cachedData.permits
         .filter((permit) => permit.sessionId === id)
-        .forEach((permit) => batch.delete(doc(firestore, 'permits', permit.id)));
+        .forEach((permit) => batch.delete(doc(getFirebaseFirestore(), 'permits', permit.id)));
 
       await batch.commit();
       return SUCCESS;
@@ -576,8 +582,8 @@ export const firestoreDataService: DataService = {
     if (authError) return authError;
 
     try {
-      await runTransaction(firestore, async (transaction) => {
-        const sessionRef = doc(firestore, 'sessions', id);
+      await runTransaction(getFirebaseFirestore(), async (transaction) => {
+        const sessionRef = doc(getFirebaseFirestore(), 'sessions', id);
         const snap = await transaction.get(sessionRef);
         if (!snap.exists()) {
           throw new Error('Sesi tidak ditemukan.');
@@ -608,8 +614,8 @@ export const firestoreDataService: DataService = {
     if (authError) return authError;
 
     try {
-      await runTransaction(firestore, async (transaction) => {
-        const sessionRef = doc(firestore, 'sessions', id);
+      await runTransaction(getFirebaseFirestore(), async (transaction) => {
+        const sessionRef = doc(getFirebaseFirestore(), 'sessions', id);
         const snap = await transaction.get(sessionRef);
         if (!snap.exists()) {
           throw new Error('Sesi tidak ditemukan.');
@@ -644,8 +650,8 @@ export const firestoreDataService: DataService = {
     try {
       // Transaksi membaca ulang dokumen sesi, sehingga dua praktikan yang
       // presensi bersamaan tidak saling menimpa array `participants`.
-      await runTransaction(firestore, async (transaction) => {
-        const sessionRef = doc(firestore, 'sessions', sessionId);
+      await runTransaction(getFirebaseFirestore(), async (transaction) => {
+        const sessionRef = doc(getFirebaseFirestore(), 'sessions', sessionId);
         const snap = await transaction.get(sessionRef);
         if (!snap.exists()) {
           throw new Error('Sesi tidak ditemukan.');
@@ -683,6 +689,58 @@ export const firestoreDataService: DataService = {
       return SUCCESS;
     } catch (err: any) {
       return FAIL(err?.message || 'Gagal mencatat presensi.');
+    }
+  },
+
+  // FR-28 (Sprint 3, HF-03) — presensi tervalidasi radius geofencing & metadata audit
+  async checkInWithLocation(input: CheckInLocationInput): Promise<CheckInLocationResult> {
+    const authError = requireAuth();
+    if (authError) return authError;
+
+    try {
+      let auditResult: AttendanceAuditRecord | undefined;
+
+      await runTransaction(getFirebaseFirestore(), async (transaction) => {
+        const sessionRef = doc(getFirebaseFirestore(), 'sessions', input.sessionId);
+        const snap = await transaction.get(sessionRef);
+        if (!snap.exists()) {
+          throw new Error('Sesi tidak ditemukan.');
+        }
+
+        const session = snap.data() as PracticumSession;
+        let participantIndex = -1;
+        if (input.participantId) {
+          participantIndex = session.participants.findIndex((p) => p.id === input.participantId);
+        }
+        if (participantIndex === -1 && input.nim) {
+          participantIndex = session.participants.findIndex((p) => p.nim === input.nim);
+        }
+
+        const participant = participantIndex !== -1 ? session.participants[participantIndex] : undefined;
+        const validation = validateCheckInLocation(session, participant, input);
+        if (!validation.valid || !validation.audit) {
+          throw new Error(validation.reason || 'Gagal memvalidasi lokasi presensi.');
+        }
+
+        auditResult = validation.audit;
+        const nowClock = formatClock();
+        const updatedParticipants = [...session.participants];
+        updatedParticipants[participantIndex] = {
+          ...participant!,
+          checkInAt: nowClock,
+          distanceMeters: validation.audit.distanceMeters,
+          verificationMethod: validation.audit.verificationMethod,
+          isWithinRadius: true,
+        };
+
+        const auditRef = doc(getFirebaseFirestore(), `sessions/${input.sessionId}/attendance`, participant!.id);
+        transaction.set(auditRef, validation.audit);
+        transaction.update(sessionRef, { participants: updatedParticipants });
+      });
+
+      return { ok: true, audit: auditResult };
+    } catch (err: any) {
+      return FAIL(err?.message || 'Gagal mencatat presensi lokasi.');
     }
   },
 
@@ -733,8 +791,8 @@ export const firestoreDataService: DataService = {
         status: 'menunggu',
       };
 
-      // Simpan hasil klasifikasi AI ke Cloud Firestore (FR-18)
-      await setDoc(doc(firestore, 'permits', id), newPermit);
+      // Simpan hasil klasifikasi AI ke Cloud getFirebaseFirestore() (FR-18)
+      await setDoc(doc(getFirebaseFirestore(), 'permits', id), newPermit);
 
       return { ok: true, permit: newPermit };
     } catch (err: any) {
@@ -748,8 +806,8 @@ export const firestoreDataService: DataService = {
     if (authError) return authError;
 
     try {
-      await runTransaction(firestore, async (transaction) => {
-        const permitRef = doc(firestore, 'permits', id);
+      await runTransaction(getFirebaseFirestore(), async (transaction) => {
+        const permitRef = doc(getFirebaseFirestore(), 'permits', id);
         const snap = await transaction.get(permitRef);
         if (!snap.exists()) {
           throw new Error('Pengajuan izin tidak ditemukan.');
