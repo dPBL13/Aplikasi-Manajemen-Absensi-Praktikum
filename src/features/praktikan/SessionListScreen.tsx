@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/card';
@@ -12,7 +12,13 @@ import { useAppData } from '@/services';
 import { findSessionParticipant, sessionsForParticipant } from '@/services/selectors';
 import { useCurrentPraktikan } from './use-current-praktikan';
 
+import type { PracticumSession } from '@/types/domain';
+import { parseDateLabel } from '@/utils/date-label';
+
 type StatusFilter = 'semua' | 'berlangsung' | 'belum-dibuka' | 'selesai';
+
+const [query, setQuery] = useState('');
+const [newestFirst, setNewestFirst] = useState(false);
 
 const FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: 'semua', label: 'Semua' },
@@ -41,13 +47,25 @@ export function SessionListScreen({ onSelect }: SessionListScreenProps) {
   );
 
   const filteredSessions = useMemo(() => {
-    return sessions.filter((session) => {
-      if (statusFilter !== 'semua' && session.status !== statusFilter) return false;
-      return true;
-    });
-  }, [sessions, statusFilter]);
+    const q = query.trim().toLowerCase();
+    const timeOf = (s: PracticumSession) => parseDateLabel(s.dateLabel)?.getTime() ?? 0;
+  
+    return sessions
+      .filter((session) => {
+        if (statusFilter !== 'semua' && session.status !== statusFilter) return false;
+        if (!q) return true;
+        return [session.courseName, session.classGroup, session.room]
+          .join(' ')
+          .toLowerCase()
+          .includes(q);
+      })
+      .sort((a, b) => {
+        const diff = timeOf(a) - timeOf(b) || a.startTime.localeCompare(b.startTime);
+        return newestFirst ? -diff : diff;
+      });
+  }, [sessions, statusFilter, query, newestFirst]);
 
-  if (filteredSessions.length === 0) {
+  if (sessions.length === 0) {
     return (
       <View style={styles.emptyWrap}>
         <EmptyState
@@ -81,6 +99,20 @@ export function SessionListScreen({ onSelect }: SessionListScreenProps) {
             </ThemedText>
           </View>
 
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Cari praktikum, kelas, atau ruang"
+            placeholderTextColor={theme.textSecondary}
+            selectionColor={theme.accent}
+            autoCapitalize="none"
+            autoCorrect={false}
+            style={[
+              styles.searchInput,
+              { color: theme.text, backgroundColor: theme.highlight, borderColor: theme.border },
+            ]}
+          />
+
           <View style={styles.filterRow}>
             {FILTER_OPTIONS.map((opt) => {
               const isActive = statusFilter === opt.value;
@@ -108,7 +140,31 @@ export function SessionListScreen({ onSelect }: SessionListScreenProps) {
               );
             })}
           </View>
+
+          <Pressable
+            onPress={() => setNewestFirst((v) => !v)}
+            accessibilityRole="button"
+            style={({ pressed }) => [
+              styles.filterChip,
+              { backgroundColor: theme.highlight, borderColor: theme.border, alignSelf: 'flex-start' },
+              pressed && styles.pressed,
+            ]}>
+            <ThemedText type="labelSm" style={{ color: theme.text }}>
+              Urutan: {newestFirst ? 'Terbaru dulu' : 'Terdekat dulu'}
+            </ThemedText>
+          </Pressable>
         </View>
+      }
+      ListEmptyComponent={
+        <EmptyState
+          title="Tidak ada sesi yang cocok"
+          hint="Ubah kata kunci atau filter status."
+          actionLabel="Reset"
+          onAction={() => {
+            setQuery('');
+            setStatusFilter('semua');
+          }}
+        />
       }
       renderItem={({ item }) => {
         const me = findSessionParticipant(item, CURRENT_PRACTIKAN_ID, currentUser.nim);
@@ -242,5 +298,12 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.8,
+  },
+  searchInput: {
+    minHeight: 44,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    paddingHorizontal: Spacing.md,
+    fontSize: 14,
   },
 });
