@@ -47,3 +47,7 @@ example
 # local-only opencode skills + config
 /.opencode/
 /opencode.json
+
+# notifier relay credentials & dependencies
+notifier/serviceAccountKey.json
+notifier/node_modules/

@@ -1,6 +1,6 @@
 import { commit, createId, getSnapshot, subscribe } from './store';
 
-import { CURRENT_ASPRAK_NAME, CURRENT_PRACTIKAN_ID } from '@/data/current-user';
+// import { CURRENT_ASPRAK_NAME, CURRENT_PRACTIKAN_ID } from '@/data/current-user';
 import type { PracticumClass, PracticumSession, SessionParticipant } from '@/types/domain';
 import { formatClock } from '@/utils/format-clock';
 import {
@@ -15,6 +15,10 @@ import {
   validateParticipantInput,
   validateSessionInput,
 } from '../validation';
+
+//Mock Constanta
+export const CURRENT_ASPRAK_NAME = 'Johan';
+export const CURRENT_PRACTIKAN_ID = 'p1';
 
 /**
  * Adapter MOCK dari `DataService`.

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button, Text, TextInput, View } from 'react-native';
-import model from '../../../../ai/model-edom.json';
-import { createSentimentClassifier } from '../../../../ai/sentiment.js';
+import model from '../../../../(old) ai/model-edom.json';
+import { createSentimentClassifier } from '../../../../(old) ai/sentiment.js';
 
 // Model dibuat sekali di luar komponen agar tidak dibuat ulang setiap render
 const classify = createSentimentClassifier(model);

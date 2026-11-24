@@ -2,6 +2,7 @@ import { onAuthStateChanged, type User } from '@react-native-firebase/auth';
 import React, { createContext, useEffect, useState } from 'react';
 
 import { getUserProfile, loginUser, logoutUser, registerUser } from '@/services/auth-service';
+import { unregisterDeviceToken } from '@/services/fcm-token-sync';
 import { getFirebaseAuth } from '@/services/firebase/config';
 import type { AuthContextType, RegisterInput, UserProfile, UserRole } from '@/types/auth';
 
@@ -53,6 +54,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    if (user?.uid) {
+      await unregisterDeviceToken(user.uid);
+    }
     await logoutUser();
     setUser(null);
     setUserProfile(null);

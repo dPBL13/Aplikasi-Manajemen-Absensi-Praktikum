@@ -62,12 +62,13 @@ export interface Participant {
 export interface SessionParticipant extends Participant {
   /** Jam presensi format 24 jam, contoh: "08:12". */
   checkInAt?: string;
-  /** Jarak ke laboratorium dalam meter saat presensi (Sprint 3 audit). */
+  /** Sprint 3 — metadata audit presensi (BR-05). */
+  latitude?: number;
+  longitude?: number;
   distanceMeters?: number;
-  /** Metode verifikasi presensi (Sprint 3 audit). */
-  verificationMethod?: AttendanceVerificationMethod;
-  /** Status validasi radius (Sprint 3 audit). */
   isWithinRadius?: boolean;
+  verificationMethod?: AttendanceVerificationMethod;
+  deviceInfo?: string;
 }
 
 /** Sesi praktikum (FR-07, FR-08). */
@@ -91,18 +92,17 @@ export interface PracticumSession {
   openedAt?: string;
   closedAt?: string;
   closingNote?: string;
+  /** Sprint 3 — relasi ke Laboratory.id (FR-29, FR-31). */
+  laboratoryId?: string;
+  /** Sprint 3 — salinan koordinat lab untuk validasi geofence (BR-02). */
+  latitude?: number;
+  longitude?: number;
+  /** Sprint 3 — radius geofence dalam meter (BR-06: 15–200, default 50). */
+  radius?: number;
+  /** Sprint 3 — rahasia QR presensi dinamis (FR-34, opsional). */
+  qrCodeSecret?: string;
   /** Salinan daftar peserta kelas + jam presensi pada sesi ini. */
   participants: SessionParticipant[];
-  /** Referensi ID laboratorium (Sprint 3). */
-  laboratoryId?: string;
-  /** Titik koordinat latitude laboratorium (Sprint 3). */
-  latitude?: number;
-  /** Titik koordinat longitude laboratorium (Sprint 3). */
-  longitude?: number;
-  /** Radius toleransi geofencing dalam meter (Sprint 3, default: 50). */
-  radius?: number;
-  /** Rahasia/token QR Code dinamis sesi untuk presensi alternatif (Sprint 3, FR-34). */
-  qrCodeSecret?: string;
 }
 
 /** Data laboratorium komputer (Sprint 3, FR-29). */
@@ -177,6 +177,35 @@ export interface Permit {
   decidedAt?: string;
   decidedBy?: string;
   decisionNote?: string;
+}
+
+/** Sprint 3 — jenis peristiwa yang memicu push notification (FR-32). */
+export type PushNotificationType =
+  | 'SESSION_OPENED'
+  | 'SCHEDULE_CHANGED'
+  | 'PERMIT_DECISION';
+
+/** Sprint 3 — isi push notification. Semua nilai `data` berupa string (aturan FCM). */
+export interface PushNotificationPayload {
+  title: string;
+  body: string;
+  data: {
+    type: PushNotificationType;
+    sessionId?: string;
+    permitId?: string;
+    /** Rute tujuan deep link, contoh: "/praktikan/presensi/session-401". */
+    screen: string;
+    params?: Record<string, string>;
+  };
+}
+
+/** Sprint 3 — dokumen token perangkat di `users/{uid}/fcmTokens/{tokenId}` (BR-09). */
+export interface FcmTokenDoc {
+  token: string;
+  platform: 'android' | 'ios';
+  deviceModel?: string;
+  /** ISO date string. */
+  lastActiveAt: string;
 }
 
 /** Bentuk state global yang dibaca UI (lihat src/services). */

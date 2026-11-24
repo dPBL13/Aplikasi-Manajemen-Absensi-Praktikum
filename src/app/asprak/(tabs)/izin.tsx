@@ -10,8 +10,8 @@ import { ThemedText } from '@/components/themed-text';
 import { MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAppData } from '@/services';
-import { formatDateTime } from '@/utils/format-date';
 import type { PermitStatus } from '@/types/domain';
+import { formatDateTime } from '@/utils/format-date';
 
 type StatusFilter = PermitStatus | 'semua';
 
@@ -22,17 +22,33 @@ const FILTERS: { value: StatusFilter; label: string }[] = [
   { value: 'ditolak', label: 'Ditolak' },
 ];
 
+type SortKey = 'terbaru' | 'terlama' | 'nama';
+
+const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+  { value: 'terbaru', label: 'Terbaru' },
+  { value: 'terlama', label: 'Terlama' },
+  { value: 'nama', label: 'Nama A–Z' },
+];
+
 /** FR-19 — daftar pengajuan izin beserta hasil klasifikasi AI. */
 export default function PermitListScreen() {
   const data = useAppData();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState<StatusFilter>('semua');
+  const [sortKey, setSortKey] = useState<SortKey>('terbaru');
 
-  const permits = useMemo(
-    () => data.permits.filter((permit) => filter === 'semua' || permit.status === filter),
-    [data.permits, filter],
-  );
+  const permits = useMemo(() => {
+    const list = data.permits.filter(
+      (permit) => filter === 'semua' || permit.status === filter,
+    );
+
+    return list.sort((a, b) => {
+      if (sortKey === 'nama') return a.participantName.localeCompare(b.participantName);
+      if (sortKey === 'terlama') return a.submittedAt.localeCompare(b.submittedAt);
+      return b.submittedAt.localeCompare(a.submittedAt);
+    });
+  }, [data.permits, filter, sortKey]);
 
   const pendingCount = data.permits.filter((permit) => permit.status === 'menunggu').length;
 
@@ -63,6 +79,34 @@ export default function PermitListScreen() {
                   accessibilityRole="button"
                   accessibilityState={{ selected: isActive }}
                   onPress={() => setFilter(option.value)}
+                  style={({ pressed }) => [
+                    styles.chip,
+                    {
+                      backgroundColor: isActive ? theme.accent : theme.highlight,
+                      borderColor: isActive ? theme.accent : theme.border,
+                    },
+                    pressed && styles.pressed,
+                  ]}>
+                  <ThemedText
+                    type="labelSm"
+                    style={{ color: isActive ? theme.accentText : theme.text }}>
+                    {option.label}
+                  </ThemedText>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <View style={styles.chips}>
+            {SORT_OPTIONS.map((option) => {
+              const isActive = sortKey === option.value;
+            
+              return (
+                <Pressable
+                  key={option.value}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isActive }}
+                  onPress={() => setSortKey(option.value)}
                   style={({ pressed }) => [
                     styles.chip,
                     {
