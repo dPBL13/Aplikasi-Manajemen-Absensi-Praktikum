@@ -43,7 +43,8 @@
       ],
       "@react-native-firebase/app",
       "@react-native-firebase/auth",
-      "expo-web-browser"
+      "expo-web-browser",
+      "@maplibre/maplibre-react-native"
     ],
     "experiments": {
       "typedRoutes": false,
