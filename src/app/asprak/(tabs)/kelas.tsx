@@ -12,27 +12,40 @@ import { useTheme } from '@/hooks/use-theme';
 import { useAppData } from '@/services';
 import type { PracticumClass } from '@/types/domain';
 
+type SortKey = 'nama' | 'kode' | 'terbaru';
+
+const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+  { value: 'nama', label: 'Nama A–Z' },
+  { value: 'kode', label: 'Kode' },
+  { value: 'terbaru', label: 'Terbaru' },
+];
+
 /** FR-05 — daftar kelas praktikum yang dikelola Asprak. */
 export default function ClassListScreen() {
   const data = useAppData();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
+  const [sortKey, setSortKey] = useState<SortKey>('nama'); //sorting
 
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-
-    if (!normalized) {
-      return data.classes;
-    }
-
-    return data.classes.filter((practicumClass) =>
-      [practicumClass.courseName, practicumClass.code, practicumClass.classGroup, practicumClass.room]
-        .join(' ')
-        .toLowerCase()
-        .includes(normalized),
-    );
-  }, [data.classes, query]);
+  
+    const list = normalized
+      ? data.classes.filter((practicumClass) =>
+          [practicumClass.courseName, practicumClass.code, practicumClass.classGroup, practicumClass.room]
+            .join(' ')
+            .toLowerCase()
+            .includes(normalized),
+        )
+      : [...data.classes];
+      
+    return list.sort((a, b) => {
+      if (sortKey === 'kode') return a.code.localeCompare(b.code);
+      if (sortKey === 'terbaru') return b.createdAt.localeCompare(a.createdAt);
+      return a.courseName.localeCompare(b.courseName);
+    });
+  }, [data.classes, query, sortKey]);
 
   return (
     <FlatList
@@ -71,6 +84,34 @@ export default function ClassListScreen() {
               accessibilityLabel="Cari kelas praktikum"
               style={[styles.searchInput, { color: theme.text }]}
             />
+          </View>
+
+          <View style={styles.chips}>
+            {SORT_OPTIONS.map((option) => {
+              const isActive = sortKey === option.value;
+            
+              return (
+                <Pressable
+                  key={option.value}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isActive }}
+                  onPress={() => setSortKey(option.value)}
+                  style={({ pressed }) => [
+                    styles.chip,
+                    {
+                      backgroundColor: isActive ? theme.accent : theme.highlight,
+                      borderColor: isActive ? theme.accent : theme.border,
+                    },
+                    pressed && styles.pressed,
+                  ]}>
+                  <ThemedText
+                    type="labelSm"
+                    style={{ color: isActive ? theme.accentText : theme.text }}>
+                    {option.label}
+                  </ThemedText>
+                </Pressable>
+              );
+            })}
           </View>
 
           <ThemedText type="bodySm" themeColor="textSecondary">
@@ -183,5 +224,16 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.8,
+  },
+  chips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.two,
+  },
+  chip: {
+    paddingVertical: Spacing.one,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radius.full,
+    borderWidth: 1,
   },
 });
