@@ -22,7 +22,6 @@ const FILTERS: { value: StatusFilter; label: string }[] = [
   { value: 'ditolak', label: 'Ditolak' },
 ];
 
-const [sortKey, setSortKey] = useState<SortKey>('terbaru');
 type SortKey = 'terbaru' | 'terlama' | 'nama';
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
@@ -37,6 +36,7 @@ export default function PermitListScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState<StatusFilter>('semua');
+  const [sortKey, setSortKey] = useState<SortKey>('terbaru');
 
   const permits = useMemo(() => {
     const list = data.permits.filter(

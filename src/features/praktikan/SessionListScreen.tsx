@@ -17,9 +17,6 @@ import { parseDateLabel } from '@/utils/date-label';
 
 type StatusFilter = 'semua' | 'berlangsung' | 'belum-dibuka' | 'selesai';
 
-const [query, setQuery] = useState('');
-const [newestFirst, setNewestFirst] = useState(false);
-
 const FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: 'semua', label: 'Semua' },
   { value: 'berlangsung', label: 'Berlangsung' },
@@ -38,6 +35,9 @@ export function SessionListScreen({ onSelect }: SessionListScreenProps) {
   const currentUser = useCurrentPraktikan();
   const CURRENT_PRACTIKAN_ID = currentUser.id;
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('semua');
+  
+  const [query, setQuery] = useState('');
+  const [newestFirst, setNewestFirst] = useState(false);
 
   const sessions = sessionsForParticipant(data, CURRENT_PRACTIKAN_ID, currentUser.nim);
   const permits = data.permits.filter(

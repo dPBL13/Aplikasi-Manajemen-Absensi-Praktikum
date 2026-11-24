@@ -50,8 +50,6 @@ const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: 'berlalu', label: 'Berlalu' },
 ];
 
-const { userProfile } = useAuth();
-
 /** Gabungkan label tanggal + jam domain menjadi satu Date. */
 function sessionMoment(dateLabel: string, timeLabel: string): Date | null {
   const date = parseDateLabel(dateLabel);
@@ -136,6 +134,8 @@ export default function AsprakScheduleScreen() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('semua');
   const [classFilter, setClassFilter] = useState(ALL_CLASSES);
   const [dateFilter, setDateFilter] = useState('');
+
+  const { userProfile } = useAuth();
 
   const isCompact = width < 600;
   const columns = width >= 1000 ? 2 : 1;
