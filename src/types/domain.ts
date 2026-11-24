@@ -62,6 +62,13 @@ export interface Participant {
 export interface SessionParticipant extends Participant {
   /** Jam presensi format 24 jam, contoh: "08:12". */
   checkInAt?: string;
+  /** Sprint 3 — metadata audit presensi (BR-05). */
+  latitude?: number;
+  longitude?: number;
+  distanceMeters?: number;
+  isWithinRadius?: boolean;
+  verificationMethod?: AttendanceVerificationMethod;
+  deviceInfo?: string;
 }
 
 /** Sesi praktikum (FR-07, FR-08). */
@@ -85,6 +92,15 @@ export interface PracticumSession {
   openedAt?: string;
   closedAt?: string;
   closingNote?: string;
+  /** Sprint 3 — relasi ke Laboratory.id (FR-29, FR-31). */
+  laboratoryId?: string;
+  /** Sprint 3 — salinan koordinat lab untuk validasi geofence (BR-02). */
+  latitude?: number;
+  longitude?: number;
+  /** Sprint 3 — radius geofence dalam meter (BR-06: 15–200, default 50). */
+  radius?: number;
+  /** Sprint 3 — rahasia QR presensi dinamis (FR-34, opsional). */
+  qrCodeSecret?: string;
   /** Salinan daftar peserta kelas + jam presensi pada sesi ini. */
   participants: SessionParticipant[];
 }
@@ -112,6 +128,70 @@ export interface Permit {
   decidedAt?: string;
   decidedBy?: string;
   decisionNote?: string;
+}
+
+/** Sprint 3 — cara presensi diverifikasi (BR-05). */
+export type AttendanceVerificationMethod = 'geofence' | 'qr_geofence';
+
+/** Sprint 3 — master data laboratorium (FR-29), koleksi `laboratories`. */
+export interface Laboratory {
+  id: string;
+  name: string;
+  code: string;
+  building: string;
+  latitude: number;
+  longitude: number;
+  /** Radius toleransi dalam meter (BR-06: 15–200, default 50). */
+  radius: number;
+  capacity: number;
+  description?: string;
+  /** ISO date string. */
+  updatedAt: string;
+  updatedBy: string;
+}
+
+/** Sprint 3 — koordinat geografis. */
+export interface GeofenceCoordinate {
+  latitude: number;
+  longitude: number;
+}
+
+/** Sprint 3 — hasil pemeriksaan jarak terhadap lab (FR-28). */
+export interface GeofenceValidationResult {
+  distanceMeters: number;
+  isWithinRadius: boolean;
+  /** Akurasi GPS dalam meter. */
+  accuracy: number;
+  isMocked: boolean;
+}
+
+/** Sprint 3 — jenis peristiwa yang memicu push notification (FR-32). */
+export type PushNotificationType =
+  | 'SESSION_OPENED'
+  | 'SCHEDULE_CHANGED'
+  | 'PERMIT_DECISION';
+
+/** Sprint 3 — isi push notification. Semua nilai `data` berupa string (aturan FCM). */
+export interface PushNotificationPayload {
+  title: string;
+  body: string;
+  data: {
+    type: PushNotificationType;
+    sessionId?: string;
+    permitId?: string;
+    /** Rute tujuan deep link, contoh: "/praktikan/presensi/session-401". */
+    screen: string;
+    params?: Record<string, string>;
+  };
+}
+
+/** Sprint 3 — dokumen token perangkat di `users/{uid}/fcmTokens/{tokenId}` (BR-09). */
+export interface FcmTokenDoc {
+  token: string;
+  platform: 'android' | 'ios';
+  deviceModel?: string;
+  /** ISO date string. */
+  lastActiveAt: string;
 }
 
 /** Bentuk state global yang dibaca UI (lihat src/services). */
