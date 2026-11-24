@@ -3,6 +3,7 @@ import React, { createContext, useEffect, useState } from 'react';
 
 import { getUserProfile, loginUser, logoutUser, registerUser } from '@/services/auth-service';
 import { firebaseAuth } from '@/services/firebase/config';
+import { unregisterDeviceToken } from '@/services/fcm-token-sync';
 import type { AuthContextType, RegisterInput, UserProfile, UserRole } from '@/types/auth';
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -53,6 +54,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    if (user?.uid) {
+      await unregisterDeviceToken(user.uid);
+    }
     await logoutUser();
     setUser(null);
     setUserProfile(null);

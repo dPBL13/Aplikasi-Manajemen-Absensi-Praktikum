@@ -371,7 +371,12 @@ Coverage details:
 3. **Persistence of permissions/decisions for praktikan**: after `decidePermit`, the praktikan side has no screen yet (FR-21).
 4. **Identity**: `/` role picker is demo-only; replace with an auth-based redirect.
 5. **Seed data** is intentional demo content; do not treat it as production data.
-6. **No tests yet.** If you add tests, cover `services/validation.ts`, `services/selectors.ts`, and `services/mock` rules first.
+6. **Sprint 3 Notification & Permission Foundation** (Yoga / YG):
+   - `expo-notifications` Android channel `sesi-praktikum`, foreground banner handler, token refresh sync ke Firestore `users/{uid}/fcmTokens/{token}` (BR-09).
+   - Centralized Device Permission Manager (`src/services/device-permission.ts`, `src/hooks/use-app-permissions.ts`, `src/components/notifications/permission-primer-dialog.tsx`) untuk lokasi, notifikasi, kamera (FR-33, BR-01).
+   - Event Triggers murni (`src/services/triggers/session-triggers.ts`, `src/services/triggers/schedule-permit-triggers.ts`) untuk sesi dibuka, perubahan jadwal, dan keputusan izin (FR-32, BR-07, BR-08).
+   - In-app Heads-up Toast (`src/components/notifications/in-app-toast.tsx`, `banner-renderer.tsx`) + Deep Link Router (`src/utils/notification-deep-link.ts`).
+   - Notifier Relay lokal Node.js (`notifier/`) dengan Firebase Admin SDK untuk mendeteksi perubahan Firestore dan mendistribusikan FCM tanpa Cloud Functions.
 
 ---
 
