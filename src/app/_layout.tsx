@@ -94,19 +94,6 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ThemeProvider value={navigationTheme}>
         <AuthProvider>
-          <AnimatedSplashOverlay />
-          <Stack
-            screenOptions={{
-              headerStyle: { backgroundColor: Colors.dark.backgroundSelected },
-              headerTintColor: Colors.dark.text,
-              headerTitleStyle: { fontFamily: Fonts.display, fontSize: 18 },
-              contentStyle: { backgroundColor: Colors.dark.background },
-            }}>
-            <Stack.Screen name="index" options={{ title: 'Manajemen Absensi Praktikum' }} />
-            <Stack.Screen name="asprak" options={{ headerShown: false }} />
-            <Stack.Screen name="praktikan" options={{ headerShown: false }} />
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          </Stack>
           <NotificationProvider>
             <AnimatedSplashOverlay />
             <RootNavigation />
@@ -115,19 +102,4 @@ export default function RootLayout() {
       </ThemeProvider>
     </SafeAreaProvider>
   );
-  
-  /* recomended by AI, but not used
-  return (
-    <SafeAreaProvider>
-      <ThemeProvider value={navigationTheme}>
-        <AuthProvider>
-          <NotificationProvider>
-            <AnimatedSplashOverlay />
-            <RootNavigation />
-          </NotificationProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </SafeAreaProvider>
-  ); 
-  */
 }

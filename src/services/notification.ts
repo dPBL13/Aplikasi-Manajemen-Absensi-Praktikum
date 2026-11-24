@@ -1,10 +1,21 @@
 // sprint 3 addition
 
-import * as Notifications from 'expo-notifications';
-import { AndroidImportance } from 'expo-notifications'; //gegara error namespace expo-notif
 import { Platform } from 'react-native';
 
 import type { PushNotificationPayload, PushNotificationType } from '@/types/domain';
+
+let Notifications: any = null;
+let AndroidImportance: any = { MAX: 5, HIGH: 4, DEFAULT: 3 };
+
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  Notifications = require('expo-notifications');
+  if (Notifications?.AndroidImportance) {
+    AndroidImportance = Notifications.AndroidImportance;
+  }
+} catch {
+  // Expo Go (StoreClient) tidak menyertakan modul native ExpoPushTokenManager
+}
 
 /** Harus sama dengan `defaultChannel` pada plugin expo-notifications di app.json. */
 export const NOTIFICATION_CHANNEL_ID = 'sesi-praktikum';
@@ -96,7 +107,7 @@ function toDataRecord(data: PushNotificationPayload['data']): Record<string, str
 let initialized = false;
 
 async function initialize(): Promise<NotificationResult> {
-  if (Platform.OS !== 'android' || initialized) {
+  if (Platform.OS !== 'android' || initialized || !Notifications?.setNotificationHandler) {
     return { ok: true };
   }
 
@@ -126,7 +137,7 @@ async function initialize(): Promise<NotificationResult> {
 }
 
 async function getDeviceToken(): Promise<string | null> {
-  if (Platform.OS !== 'android') return null;
+  if (Platform.OS !== 'android' || !Notifications?.getDevicePushTokenAsync) return null;
 
   // Android 13+: kanal harus ada sebelum token diminta.
   const ready = await initialize();
@@ -142,7 +153,7 @@ async function getDeviceToken(): Promise<string | null> {
 }
 
 function onTokenRefresh(listener: (token: string) => void): () => void {
-  if (Platform.OS !== 'android') return () => {};
+  if (Platform.OS !== 'android' || !Notifications?.addPushTokenListener) return () => {};
 
   const subscription = Notifications.addPushTokenListener((token: any) => {
     if (typeof token.data === 'string') listener(token.data);
@@ -154,6 +165,8 @@ function onTokenRefresh(listener: (token: string) => void): () => void {
 function onForegroundNotification(
   listener: (payload: PushNotificationPayload) => void,
 ): () => void {
+  if (!Notifications?.addNotificationReceivedListener) return () => {};
+
   const subscription = Notifications.addNotificationReceivedListener((notification: any) => {
     const payload = parseNotificationContent(notification.request.content);
     if (payload) listener(payload);
@@ -163,6 +176,7 @@ function onForegroundNotification(
 }
 
 async function showLocal(payload: PushNotificationPayload): Promise<NotificationResult> {
+  if (!Notifications?.scheduleNotificationAsync) return { ok: true };
   const ready = await initialize();
   if (!ready.ok) return ready;
 

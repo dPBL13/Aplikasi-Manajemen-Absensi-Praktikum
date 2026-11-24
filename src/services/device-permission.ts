@@ -1,11 +1,33 @@
 // sprint 3
 
-import { Camera } from 'expo-camera';
-import * as Location from 'expo-location';
-import * as Notifications from 'expo-notifications';
 import { Linking } from 'react-native';
 
 import { notificationService } from '@/services/notification';
+
+let Camera: any = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const cameraPkg = require('expo-camera');
+  Camera = cameraPkg.Camera || cameraPkg.CameraView || cameraPkg;
+} catch {
+  // Expo Go fallback
+}
+
+let Location: any = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  Location = require('expo-location');
+} catch {
+  // Expo Go fallback
+}
+
+let Notifications: any = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  Notifications = require('expo-notifications');
+} catch {
+  // Expo Go fallback
+}
 
 export type PermissionKind = 'location' | 'notification' | 'camera';
 /** blocked = pengguna menolak dan OS tidak mau bertanya lagi (canAskAgain false). */
@@ -73,14 +95,23 @@ export function mapPermissionResponse(raw: RawPermission): PermissionState {
 async function readRaw(kind: PermissionKind, ask: boolean): Promise<RawPermission> {
   switch (kind) {
     case 'location':
+      if (!Location?.getForegroundPermissionsAsync) {
+        return { status: 'granted', granted: true, canAskAgain: true };
+      }
       return ask
         ? Location.requestForegroundPermissionsAsync()
         : Location.getForegroundPermissionsAsync();
     case 'notification':
       // Android 13+: kanal harus ada dulu, kalau tidak dialog izin tidak muncul.
       if (ask) await notificationService.initialize();
+      if (!Notifications?.getPermissionsAsync) {
+        return { status: 'granted', granted: true, canAskAgain: true };
+      }
       return ask ? Notifications.requestPermissionsAsync() : Notifications.getPermissionsAsync();
     case 'camera':
+      if (!Camera?.getCameraPermissionsAsync && !Camera?.requestCameraPermissionsAsync) {
+        return { status: 'granted', granted: true, canAskAgain: true };
+      }
       return ask ? Camera.requestCameraPermissionsAsync() : Camera.getCameraPermissionsAsync();
   }
 }
@@ -109,6 +140,7 @@ export const devicePermissionService: DevicePermissionService = {
   requestCamera: () => request('camera'),
   async isLocationServiceEnabled() {
     try {
+      if (!Location?.hasServicesEnabledAsync) return true;
       return await Location.hasServicesEnabledAsync();
     } catch {
       return false;

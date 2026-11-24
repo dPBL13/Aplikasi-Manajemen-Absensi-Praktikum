@@ -6,10 +6,17 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Fonts } from '@/constants/theme';
 import type { PushNotificationPayload } from '@/types/domain';
+
+let Haptics: any = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  Haptics = require('expo-haptics');
+} catch {
+  // Expo Go fallback
+}
 
 interface InAppToastProps {
   payload: PushNotificationPayload;
@@ -41,7 +48,7 @@ export function InAppToast({ payload, onPress, onDismiss }: InAppToastProps) {
 
   useEffect(() => {
     // Haptic feedback ringan saat toast muncul
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    Haptics?.impactAsync?.(Haptics?.ImpactFeedbackStyle?.Light ?? 'light')?.catch(() => {});
 
     // Animasi slide down & fade in
     Animated.parallel([

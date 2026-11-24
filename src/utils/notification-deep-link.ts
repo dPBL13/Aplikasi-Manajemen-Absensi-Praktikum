@@ -1,8 +1,15 @@
 import { router } from 'expo-router';
-import * as Notifications from 'expo-notifications';
 import { parseNotificationContent } from '@/services/notification';
 import type { PushNotificationPayload } from '@/types/domain';
 import type { UserRole } from '@/types/auth';
+
+let Notifications: any = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  Notifications = require('expo-notifications');
+} catch {
+  // Expo Go fallback
+}
 
 // Allowlist awalan rute yang sah dalam aplikasi
 const ALLOWED_ROUTE_PREFIXES = ['/praktikan/', '/asprak/'];
@@ -90,6 +97,9 @@ export function consumePendingNavigation(role: UserRole | null): void {
 export function setupNotificationResponseListener(
   getRole: () => UserRole | null
 ): () => void {
+  if (!Notifications?.addNotificationResponseReceivedListener) {
+    return () => {};
+  }
   // 1. Tangani ketukan saat aplikasi berjalan di background atau foreground
   const subscription = Notifications.addNotificationResponseReceivedListener((response: any) => {
     const rawContent = response.notification.request.content;
