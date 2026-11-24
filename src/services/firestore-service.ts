@@ -23,7 +23,8 @@ import type {
 } from '@/types/domain';
 import { formatClock } from '@/utils/format-clock';
 import { firebaseAuth, firestore } from './firebase/config';
-import { classifyLeaveReason } from './gemini-service';
+// import { classifyLeaveReason } from './gemini-service'; // versi API Gemini
+import { classifyLeaveReasonLocal } from './local-classifier'; // versi lokal
 import type {
   ClassInput,
   DataService,
@@ -735,8 +736,11 @@ export const firestoreDataService: DataService = {
     const nim = input.nim || participant?.nim || '24060124120000';
 
     try {
-      // Panggil Gemini AI untuk klasifikasi alasan (FR-17)
-      const aiResult = await classifyLeaveReason(reason);
+      /* // Panggil Gemini AI untuk klasifikasi alasan (FR-17)
+      const aiResult = await classifyLeaveReason(reason); */
+
+      // Klasifikasi alasan izin secara offline dengan model lokal (FR-17)
+      const aiResult = classifyLeaveReasonLocal(reason);
 
       const id = generateId('permit');
       const newPermit: Permit = {
