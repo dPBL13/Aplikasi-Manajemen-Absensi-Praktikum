@@ -1,0 +1,12 @@
+{
+  "name": "siprak-notifier-relay",
+  "version": "1.0.0",
+  "description": "Local Firestore onSnapshot to FCM relay for SIPRAK",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.1.0"
+  }
+}

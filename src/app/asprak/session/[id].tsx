@@ -201,6 +201,16 @@ export default function AsprakSessionDetailScreen() {
                     Sesi sedang berlangsung. Tutup sesi setelah praktikum selesai.
                   </ThemedText>
                   <ActionButton
+                    label="Tampilkan QR Code Presensi"
+                    tone="primary"
+                    onPress={() =>
+                      router.push({
+                        pathname: '/asprak/session/qr',
+                        params: { id: session.id },
+                      })
+                    }
+                  />
+                  <ActionButton
                     label="Tutup Sesi"
                     tone="danger"
                     onPress={() => setPendingAction('close')}
@@ -320,6 +330,11 @@ export default function AsprakSessionDetailScreen() {
                       <ThemedText type="monoSm" themeColor="onSurfaceSecondary">
                         {participant.checkInAt ?? '—'}
                       </ThemedText>
+                      {participant.distanceMeters !== undefined ? (
+                        <ThemedText type="labelSm" style={{ color: theme.success, fontSize: 10 }}>
+                          {Math.round(participant.distanceMeters)}m · {participant.verificationMethod === 'qr_geofence' ? 'QR' : 'GPS'}
+                        </ThemedText>
+                      ) : null}
                     </View>
                   </Pressable>
                 ))}

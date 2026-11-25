@@ -1,15 +1,19 @@
 import { Commissioner_400Regular, Commissioner_500Medium, Commissioner_600SemiBold, Commissioner_700Bold } from '@expo-google-fonts/commissioner';
 import { RedHatDisplay_600SemiBold, RedHatDisplay_700Bold } from '@expo-google-fonts/red-hat-display';
 import { SplineSansMono_500Medium } from '@expo-google-fonts/spline-sans-mono';
-import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 import { useFonts } from 'expo-font';
+import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { BannerRenderer } from '@/components/notifications/banner-renderer';
 import { Colors, Fonts } from '@/constants/theme';
 import { AuthProvider } from '@/context/auth-context';
+import { NotificationProvider } from '@/context/notification-context';
+import { useAuth } from '@/hooks/use-auth';
+import { consumePendingNavigation, setupNotificationResponseListener } from '@/utils/notification-deep-link';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -30,6 +34,41 @@ const navigationTheme = {
  * Root navigator. The app is dark-only (Eclipse & Moss) and loads the three
  * typefaces from the stitched designs before the first screen renders.
  */
+function RootNavigation() {
+  const { role, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading) {
+      consumePendingNavigation(role);
+    }
+  }, [role, loading]);
+
+  useEffect(() => {
+    const unsubscribe = setupNotificationResponseListener(() => role);
+    return () => {
+      unsubscribe();
+    };
+  }, [role]);
+
+  return (
+    <>
+      <BannerRenderer />
+      <Stack
+        screenOptions={{
+          headerStyle: { backgroundColor: Colors.dark.backgroundSelected },
+          headerTintColor: Colors.dark.text,
+          headerTitleStyle: { fontFamily: Fonts.display, fontSize: 18 },
+          contentStyle: { backgroundColor: Colors.dark.background },
+        }}>
+        <Stack.Screen name="index" options={{ title: 'Manajemen Absensi Praktikum' }} />
+        <Stack.Screen name="asprak" options={{ headerShown: false }} />
+        <Stack.Screen name="praktikan" options={{ headerShown: false }} />
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+      </Stack>
+    </>
+  );
+}
+
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     [Fonts.display]: RedHatDisplay_700Bold,
@@ -55,19 +94,10 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ThemeProvider value={navigationTheme}>
         <AuthProvider>
-          <AnimatedSplashOverlay />
-          <Stack
-            screenOptions={{
-              headerStyle: { backgroundColor: Colors.dark.backgroundSelected },
-              headerTintColor: Colors.dark.text,
-              headerTitleStyle: { fontFamily: Fonts.display, fontSize: 18 },
-              contentStyle: { backgroundColor: Colors.dark.background },
-            }}>
-            <Stack.Screen name="index" options={{ title: 'Manajemen Absensi Praktikum' }} />
-            <Stack.Screen name="asprak" options={{ headerShown: false }} />
-            <Stack.Screen name="praktikan" options={{ headerShown: false }} />
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          </Stack>
+          <NotificationProvider>
+            <AnimatedSplashOverlay />
+            <RootNavigation />
+          </NotificationProvider>
         </AuthProvider>
       </ThemeProvider>
     </SafeAreaProvider>

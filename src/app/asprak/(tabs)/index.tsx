@@ -19,9 +19,9 @@ import { SessionCard } from '@/components/session-card';
 import { StatTile } from '@/components/stat-tile';
 import { ThemedText } from '@/components/themed-text';
 import { MaxContentWidth, Radius, Spacing } from '@/constants/theme';
-import { CURRENT_ASPRAK_NAME } from '@/data/current-user';
-import { useTheme } from '@/hooks/use-theme';
+import { useAuth } from '@/hooks/use-auth';
 import { useNow } from '@/hooks/use-now';
+import { useTheme } from '@/hooks/use-theme';
 import { useAppData } from '@/services';
 import { asprakOverview } from '@/services/selectors';
 import type { PracticumSession, SessionStatus } from '@/types/domain';
@@ -134,6 +134,8 @@ export default function AsprakScheduleScreen() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('semua');
   const [classFilter, setClassFilter] = useState(ALL_CLASSES);
   const [dateFilter, setDateFilter] = useState('');
+
+  const { userProfile } = useAuth();
 
   const isCompact = width < 600;
   const columns = width >= 1000 ? 2 : 1;
@@ -253,7 +255,7 @@ export default function AsprakScheduleScreen() {
         <View style={styles.header}>
           <View style={styles.heading}>
             <ThemedText type="bodySm" themeColor="textSecondary">
-              Asprak · {CURRENT_ASPRAK_NAME}
+              Asprak · {`Asprak · ${userProfile?.name?.trim() || 'Asprak Null'}`}
             </ThemedText>
             <ThemedText type="headlineLg" themeColor="text">
               Jadwal Saya

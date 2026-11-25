@@ -22,7 +22,7 @@
       "package": "com.dpbl13.amapppk"
     },
     "web": {
-      "output": "server",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
@@ -43,7 +43,31 @@
       ],
       "@react-native-firebase/app",
       "@react-native-firebase/auth",
-      "@react-native-google-signin/google-signin"
+      "expo-web-browser",
+      [
+        "expo-notifications",
+        {
+          "color": "#235C3A",
+          "defaultChannel": "sesi-praktikum"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "isAndroidBackgroundLocationEnabled": false,
+          "isAndroidForegroundServiceEnabled": false
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Kamera dipakai untuk memindai QR Code presensi.",
+          "recordAudioAndroid": false,
+          "barcodeScannerEnabled": true
+        }
+      ],
+      "@maplibre/maplibre-react-native",
+      "@react-native-firebase/messaging"
     ],
     "experiments": {
       "typedRoutes": false,
@@ -56,8 +80,9 @@
         }
       },
       "eas": {
-        "projectId": "27e777a5-499d-4acb-9564-9e83dd793e30"
+        "projectId": "d408cfb1-ac25-462f-b54d-c9f17b3f9bb4"
       }
-    }
+    },
+    "owner": "hafiszulfikars-team"
   }
 }

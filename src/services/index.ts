@@ -11,6 +11,7 @@ import type { DataService } from './types';
  */
 export const dataService: DataService = firestoreDataService;
 export { mockDataService, firestoreDataService };
+export * from './attendance-location';
 
 
 

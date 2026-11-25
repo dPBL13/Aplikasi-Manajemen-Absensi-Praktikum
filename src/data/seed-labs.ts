@@ -62,3 +62,8 @@ export const seedLaboratories: Laboratory[] = [
     updatedBy: 'seed',
   },
 ];
+
+export function getLaboratoryById(id?: string): Laboratory {
+  const lab = seedLaboratories.find((l) => l.id === id);
+  return lab ?? seedLaboratories[0];
+}

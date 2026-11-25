@@ -54,6 +54,22 @@ export function ParticipantDetailModal({
               value={participant.checkInAt ?? 'Belum tercatat'}
               valueType={participant.checkInAt ? 'monoSm' : 'bodySm'}
             />
+            {participant.distanceMeters !== undefined ? (
+              <InfoRow
+                label="Jarak saat presensi"
+                value={`${Math.round(participant.distanceMeters)} meter (Terverifikasi dalam radius)`}
+              />
+            ) : null}
+            {participant.verificationMethod ? (
+              <InfoRow
+                label="Metode verifikasi"
+                value={
+                  participant.verificationMethod === 'qr_geofence'
+                    ? 'QR Code + Geofence GPS'
+                    : 'Geofence GPS Mandiri'
+                }
+              />
+            ) : null}
             <InfoRow label="Praktikum" value={session.courseName} />
             <InfoRow label="Kelas" value={session.classGroup} />
             <InfoRow

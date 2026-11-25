@@ -12,6 +12,9 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_ASPRAK_SECRET_TOKEN": "ASPRAK2026"
       }
     },
     "production": {

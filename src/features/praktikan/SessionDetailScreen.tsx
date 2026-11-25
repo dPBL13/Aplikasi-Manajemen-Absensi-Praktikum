@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -174,6 +175,19 @@ export function SessionDetailScreen({
             disabled={!canCheckIn || busy}
             tone={canCheckIn ? 'primary' : 'secondary'}
           />
+
+          {session.status === 'berlangsung' && !present ? (
+            <ActionButton
+              label="📡 Buka Radar Presensi Geofencing"
+              tone="primary"
+              onPress={() =>
+                router.push({
+                  pathname: '/praktikan/presensi/[sessionId]',
+                  params: { sessionId: session.id },
+                })
+              }
+            />
+          ) : null}
 
           {canRequestLeave && !leave ? (
             <View style={[styles.leavePrompt, { borderTopColor: theme.border }]}>

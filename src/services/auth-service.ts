@@ -10,11 +10,11 @@ import { doc, getDoc, setDoc } from '@react-native-firebase/firestore';
 import type { RegisterInput, UserProfile } from '@/types/auth';
 import { getFirebaseErrorMessage } from '@/utils/error-handler';
 import { validateRegistrationInput } from '@/utils/validation';
-import { firebaseAuth, firestore } from './firebase/config';
+import { getFirebaseAuth, getFirebaseFirestore } from './firebase/config';
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   try {
-    const docSnap = await getDoc(doc(firestore, 'users', uid));
+    const docSnap = await getDoc(doc(getFirebaseFirestore(), 'users', uid));
     if (docSnap.exists()) {
       return docSnap.data() as UserProfile;
     }
@@ -40,7 +40,7 @@ async function saveProfileWithRetry(
 
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     try {
-      await setDoc(doc(firestore, 'users', uid), profile, { merge: true });
+      await setDoc(doc(getFirebaseFirestore(), 'users', uid), profile, { merge: true });
       return;
     } catch (error) {
       lastError = error;
@@ -63,7 +63,7 @@ export async function registerUser(
 
   try {
     const cred = await createUserWithEmailAndPassword(
-      firebaseAuth,
+      getFirebaseAuth(),
       input.email.trim(),
       input.password
     );
@@ -109,7 +109,7 @@ export async function loginUser(
       };
     }
 
-    const cred = await signInWithEmailAndPassword(firebaseAuth, targetEmail, password);
+    const cred = await signInWithEmailAndPassword(getFirebaseAuth(), targetEmail, password);
     const profile = await getUserProfile(cred.user.uid);
 
     if (!profile) {
@@ -133,7 +133,7 @@ export async function loginUser(
 
 export async function logoutUser(): Promise<void> {
   try {
-    await signOut(firebaseAuth);
+    await signOut(getFirebaseAuth());
   } catch (error) {
     console.warn('[auth-service] Gagal logout:', error);
   }
