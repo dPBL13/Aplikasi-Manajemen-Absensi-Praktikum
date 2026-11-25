@@ -23,6 +23,8 @@ export default function AsprakLayout() {
       <Stack.Screen name="session/baru" options={{ title: 'Jadwal Baru' }} />
       <Stack.Screen name="session/[id]" options={{ title: 'Detail Sesi' }} />
       <Stack.Screen name="izin/[id]" options={{ title: 'Detail Pengajuan Izin' }} />
+      <Stack.Screen name="lab/baru" options={{ title: 'Lab Baru' }} />
+      <Stack.Screen name="lab/[id]" options={{ title: 'Kelola Laboratorium' }} />
     </Stack>
   );
 }

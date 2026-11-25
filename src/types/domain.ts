@@ -73,6 +73,11 @@ export interface PracticumSession {
   courseName: string;
   classGroup: string;
   room: string;
+  /**
+   * Relasi ke Laboratory.id (Sprint 3, FR-29/FR-31). Opsional agar sesi lama
+   * tetap valid; bila kosong, aktivitas lab dicocokkan lewat nama `room`.
+   */
+  laboratoryId?: string;
   dayLabel: string;
   /** Tanggal yang sudah diformat untuk UI, contoh: "26 Oktober 2026". */
   dateLabel: string;
@@ -119,4 +124,48 @@ export interface AppData {
   classes: PracticumClass[];
   sessions: PracticumSession[];
   permits: Permit[];
+}
+
+/**
+ * Laboratorium + parameter geofencing (Sprint 3, FR-29 / JH-01).
+ * Koleksi Firestore: `laboratories`. Radius default 50 m, rentang 15–200 m (BR-06).
+ */
+export interface Laboratory {
+  id: string;
+  /** Nama lengkap, contoh: "Laboratorium Rekayasa Perangkat Lunak". */
+  name: string;
+  /** Kode unik, contoh: "LAB-RPL". */
+  code: string;
+  /** Gedung & lantai, contoh: "Gedung E Lantai 2". */
+  building: string;
+  /** Derajat desimal WGS84, -90..90. */
+  latitude: number;
+  /** Derajat desimal WGS84, -180..180. */
+  longitude: number;
+  /** Radius geofencing dalam meter (15–200). */
+  radius: number;
+  /** Kapasitas kursi/PC. */
+  capacity?: number;
+  description?: string;
+  /** ISO date string. */
+  updatedAt: string;
+  /** UID Asprak terakhir yang mengubah data. */
+  updatedBy: string;
+}
+
+/** Titik koordinat WGS84 (kontrak SRS §10.2). */
+export interface GeofenceCoordinate {
+  latitude: number;
+  longitude: number;
+}
+
+/** Hasil validasi posisi perangkat terhadap sebuah geofence (kontrak SRS §10.2). */
+export interface GeofenceValidationResult {
+  /** Jarak Haversine ke pusat geofence, meter. */
+  distanceMeters: number;
+  isWithinRadius: boolean;
+  /** Akurasi horizontal GPS (meter); Infinity bila tidak diketahui. */
+  accuracy: number;
+  /** true bila OS menandai koordinat berasal dari mock provider. */
+  isMocked: boolean;
 }
