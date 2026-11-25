@@ -2,221 +2,169 @@ const admin = require('firebase-admin');
 const fs = require('fs');
 const path = require('path');
 
-const keyPath = path.resolve(process.cwd(), 'serviceAccountKey.json');
+// Fungsi murni yang sama dengan yang diuji (hanya `import type`, aman di Node via tsx).
+const {
+  detectSessionOpened,
+  buildSessionOpenedPayload,
+  resolveSessionRecipientNims,
+} = require('../src/services/triggers/session-triggers');
+const {
+  detectScheduleChanged,
+  buildScheduleChangedPayload,
+  detectPermitDecision,
+  buildPermitDecisionPayload,
+} = require('../src/services/triggers/schedule-permit-triggers');
+
+const keyPath = path.resolve(__dirname, 'serviceAccountKey.json');
 if (!fs.existsSync(keyPath)) {
-  console.error('\x1b[31m[ERROR]\x1b[0m serviceAccountKey.json tidak ditemukan di folder notifier/');
-  console.error('Silakan unduh dari Firebase Console -> Project Settings -> Service accounts -> Generate new private key');
+  console.error('[ERROR] serviceAccountKey.json tidak ditemukan di folder notifier/');
+  console.error('Unduh dari Firebase Console -> Project Settings -> Service accounts -> Generate new private key');
   process.exit(1);
 }
 
-const serviceAccount = require(keyPath);
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
-
+admin.initializeApp({ credential: admin.credential.cert(require(keyPath)) });
 const db = admin.firestore();
 const messaging = admin.messaging();
 
-console.log('\x1b[32m[SIPRAK NOTIFIER RELAY]\x1b[0m Service initialized. Listening to Firestore changes...');
-
-let initialSessionsLoaded = false;
-let initialPermitsLoaded = false;
+const CHANNEL_ID = 'sesi-praktikum';
 const sessionCache = new Map();
 const permitCache = new Map();
+let sessionsReady = false;
+let permitsReady = false;
 
-/**
- * Mengirim pesan FCM multicast ke token list dan menghapus token yang kedaluwarsa/invalid.
- */
-async function sendNotificationToTokens(tokensWithDocRef, payload) {
-  if (!tokensWithDocRef || tokensWithDocRef.length === 0) return;
+// Pengiriman berurutan agar urutan notifikasi sama dengan urutan perubahan data.
+let queue = Promise.resolve();
+const enqueue = (job) => {
+  queue = queue.then(job).catch((error) => console.error('[RELAY] Job gagal:', error));
+};
 
-  const registrationTokens = tokensWithDocRef.map((t) => t.token);
+/** Cari token FCM berdasarkan NIM (BR-07/BR-08); token yang sama hanya dikirim sekali. */
+async function getTokensByNims(nims) {
+  const unique = [...new Set((nims || []).filter(Boolean))];
+  const byToken = new Map();
 
-  const message = {
-    tokens: registrationTokens,
-    notification: {
-      title: payload.title,
-      body: payload.body,
-    },
-    data: {
-      type: payload.data.type,
-      screen: payload.data.screen,
-      sessionId: payload.data.sessionId || '',
-      permitId: payload.data.permitId || '',
-      params: JSON.stringify(payload.data.params || {}),
-    },
+  for (let i = 0; i < unique.length; i += 30) {
+    const chunk = unique.slice(i, i + 30); // batas operator `in` Firestore
+    const users = await db.collection('users').where('nim', 'in', chunk).get();
+    const lists = await Promise.all(users.docs.map((u) => u.ref.collection('fcmTokens').get()));
+    for (const snap of lists) {
+      snap.forEach((doc) => {
+        const data = doc.data();
+        if (data && data.token && !byToken.has(data.token)) {
+          byToken.set(data.token, { token: data.token, ref: doc.ref });
+        }
+      });
+    }
+  }
+  return [...byToken.values()];
+}
+
+/** FCM `data` wajib string datar; kunci kosong dibuang. */
+function toFcmData(data) {
+  const out = { type: data.type, screen: data.screen };
+  if (data.sessionId) out.sessionId = data.sessionId;
+  if (data.permitId) out.permitId = data.permitId;
+  if (data.params) out.params = JSON.stringify(data.params);
+  return out;
+}
+
+async function send(targets, payload) {
+  if (targets.length === 0) {
+    console.log(`[FCM] ${payload.data.type}: tidak ada token tujuan.`);
+    return;
+  }
+  const response = await messaging.sendEachForMulticast({
+    tokens: targets.map((t) => t.token),
+    notification: { title: payload.title, body: payload.body },
+    data: toFcmData(payload.data),
     android: {
       priority: 'high',
-      notification: {
-        channelId: 'sesi-praktikum',
-        defaultVibrateTimings: true,
-      },
+      notification: { channelId: CHANNEL_ID, defaultVibrateTimings: true },
     },
-  };
+  });
+  console.log(`[FCM] ${payload.data.type}: sukses ${response.successCount}, gagal ${response.failureCount}`);
 
-  try {
-    const response = await messaging.sendEachForMulticast(message);
-    console.log(`[FCM] Sent to ${registrationTokens.length} devices. Success: ${response.successCount}, Failure: ${response.failureCount}`);
-
-    // Bersihkan token invalid
-    if (response.failureCount > 0) {
-      response.responses.forEach((resp, idx) => {
-        if (!resp.success) {
-          const errCode = resp.error?.code;
-          if (
-            errCode === 'messaging/registration-token-not-registered' ||
-            errCode === 'messaging/invalid-registration-token'
-          ) {
-            const invalidRef = tokensWithDocRef[idx].ref;
-            invalidRef.delete().catch(() => {});
-            console.log(`[FCM Cleanup] Removed invalid token: ${tokensWithDocRef[idx].token}`);
-          }
-        }
-      });
+  response.responses.forEach((res, index) => {
+    const code = res.error && res.error.code;
+    if (
+      !res.success &&
+      (code === 'messaging/registration-token-not-registered' ||
+        code === 'messaging/invalid-registration-token')
+    ) {
+      targets[index].ref.delete().catch(() => {});
+      console.log('[FCM] Token tidak valid dihapus.');
     }
-  } catch (error) {
-    console.error('[FCM Error]', error);
+  });
+}
+
+const dispatch = async (nims, payload) => send(await getTokensByNims(nims), payload);
+
+function handleSessionChange(change) {
+  const id = change.doc.id;
+  if (change.type === 'removed') {
+    sessionCache.delete(id);
+    return;
+  }
+  const next = { ...change.doc.data(), id };
+  const prev = sessionCache.get(id);
+  sessionCache.set(id, next); // perbarui SEBELUM kerja async: mencegah notifikasi ganda
+
+  if (change.type !== 'modified' || !prev) return;
+
+  const payloads = [];
+  if (detectSessionOpened(prev, next)) payloads.push(buildSessionOpenedPayload(next));
+  if (detectScheduleChanged(prev, next)) payloads.push(buildScheduleChangedPayload(next));
+  if (payloads.length === 0) return;
+
+  const nims = resolveSessionRecipientNims(next);
+  for (const payload of payloads) {
+    console.log(`[TRIGGER] ${payload.data.type}: ${next.courseName} (${id})`);
+    enqueue(() => dispatch(nims, payload));
   }
 }
 
-/**
- * Mencari semua token FCM milik pengguna berdasarkan daftar NIM (BR-07, BR-08).
- */
-async function getTokensByNims(nims) {
-  if (!nims || nims.length === 0) return [];
-
-  const tokens = [];
-  const chunkSize = 30; // Firestore IN query limit
-
-  for (let i = 0; i < nims.length; i += chunkSize) {
-    const chunk = nims.slice(i, i + chunkSize);
-    const usersSnapshot = await db.collection('users').where('nim', 'in', chunk).get();
-
-    for (const userDoc of usersSnapshot.docs) {
-      const tokensSnap = await userDoc.ref.collection('fcmTokens').get();
-      tokensSnap.forEach((tDoc) => {
-        const data = tDoc.data();
-        if (data && data.token) {
-          tokens.push({
-            token: data.token,
-            ref: tDoc.ref,
-          });
-        }
-      });
-    }
+function handlePermitChange(change) {
+  const id = change.doc.id;
+  if (change.type === 'removed') {
+    permitCache.delete(id);
+    return;
   }
+  const next = { ...change.doc.data(), id };
+  const prev = permitCache.get(id);
+  permitCache.set(id, next);
 
-  return tokens;
+  if (change.type !== 'modified' || !prev || !next.nim) return;
+  if (!detectPermitDecision(prev, next)) return;
+
+  console.log(`[TRIGGER] PERMIT_DECISION ${next.status}: NIM ${next.nim}`);
+  enqueue(() => dispatch([next.nim], buildPermitDecisionPayload(next)));
 }
 
-// 1. Pantau Koleksi Sessions
-db.collection('sessions').onSnapshot((snapshot) => {
-  if (!initialSessionsLoaded) {
-    snapshot.forEach((doc) => {
-      sessionCache.set(doc.id, doc.data());
-    });
-    initialSessionsLoaded = true;
-    console.log(`[RELAY] Initial sessions cached (${sessionCache.size} documents).`);
-    return;
-  }
-
-  snapshot.docChanges().forEach(async (change) => {
-    const docId = change.doc.id;
-    const next = change.doc.data();
-    const prev = sessionCache.get(docId);
-
-    if (change.type === 'modified') {
-      // Cek Trigger Sesi Dibuka (FR-32)
-      if (prev && prev.status !== 'berlangsung' && next.status === 'berlangsung') {
-        console.log(`[TRIGGER] Sesi Dibuka: ${next.courseName} (${docId})`);
-        const nims = (next.participants || []).map((p) => p.nim).filter(Boolean);
-        const tokens = await getTokensByNims(nims);
-
-        const payload = {
-          title: 'SIPRAK Informatika Undip',
-          body: `Sesi Praktikum Telah Dibuka: ${next.courseName} (${next.classGroup || ''}). Segera lakukan presensi di ${next.room || ''}!`,
-          data: {
-            type: 'SESSION_OPENED',
-            sessionId: docId,
-            screen: `/praktikan/session/${docId}`,
-            params: { sessionId: docId, courseName: next.courseName },
-          },
-        };
-        await sendNotificationToTokens(tokens, payload);
-      }
-
-      // Cek Trigger Jadwal Berubah (FR-32)
-      if (
-        prev &&
-        (prev.dayLabel !== next.dayLabel ||
-          prev.dateLabel !== next.dateLabel ||
-          prev.startTime !== next.startTime ||
-          prev.endTime !== next.endTime ||
-          prev.room !== next.room)
-      ) {
-        console.log(`[TRIGGER] Jadwal Berubah: ${next.courseName} (${docId})`);
-        const nims = (next.participants || []).map((p) => p.nim).filter(Boolean);
-        const tokens = await getTokensByNims(nims);
-
-        const payload = {
-          title: 'SIPRAK Informatika Undip',
-          body: `Pemberitahuan: Jadwal praktikum ${next.courseName} mengalami perubahan`,
-          data: {
-            type: 'SCHEDULE_CHANGED',
-            sessionId: docId,
-            screen: `/praktikan/session/${docId}`,
-            params: { sessionId: docId, courseName: next.courseName },
-          },
-        };
-        await sendNotificationToTokens(tokens, payload);
-      }
+// Snapshot pertama hanya mengisi cache (tidak mengirim apa pun).
+db.collection('sessions').onSnapshot(
+  (snapshot) => {
+    if (!sessionsReady) {
+      snapshot.forEach((doc) => sessionCache.set(doc.id, { ...doc.data(), id: doc.id }));
+      sessionsReady = true;
+      console.log(`[RELAY] Cache awal sesi: ${sessionCache.size}`);
+      return;
     }
+    snapshot.docChanges().forEach(handleSessionChange);
+  },
+  (error) => console.error('[RELAY] Listener sessions error:', error),
+);
 
-    sessionCache.set(docId, next);
-  });
-});
-
-// 2. Pantau Koleksi Permits
-db.collection('permits').onSnapshot((snapshot) => {
-  if (!initialPermitsLoaded) {
-    snapshot.forEach((doc) => {
-      permitCache.set(doc.id, doc.data());
-    });
-    initialPermitsLoaded = true;
-    console.log(`[RELAY] Initial permits cached (${permitCache.size} documents).`);
-    return;
-  }
-
-  snapshot.docChanges().forEach(async (change) => {
-    const docId = change.doc.id;
-    const next = change.doc.data();
-    const prev = permitCache.get(docId);
-
-    if (change.type === 'modified') {
-      // Cek Trigger Keputusan Izin (FR-32, BR-08)
-      if (prev && prev.status === 'menunggu' && (next.status === 'diterima' || next.status === 'ditolak')) {
-        console.log(`[TRIGGER] Status Izin ${next.status}: ${next.courseName} untuk NIM ${next.nim}`);
-        if (next.nim) {
-          const tokens = await getTokensByNims([next.nim]);
-          const statusLabel = next.status === 'diterima' ? 'Diterima' : 'Ditolak';
-
-          const payload = {
-            title: 'SIPRAK Informatika Undip',
-            body: `Status Izin: Pengajuan izin Anda untuk sesi ${next.courseName || ''} telah ${statusLabel}`,
-            data: {
-              type: 'PERMIT_DECISION',
-              permitId: docId,
-              sessionId: next.sessionId || '',
-              screen: '/praktikan/riwayat',
-              params: { permitId: docId, status: next.status },
-            },
-          };
-          await sendNotificationToTokens(tokens, payload);
-        }
-      }
+db.collection('permits').onSnapshot(
+  (snapshot) => {
+    if (!permitsReady) {
+      snapshot.forEach((doc) => permitCache.set(doc.id, { ...doc.data(), id: doc.id }));
+      permitsReady = true;
+      console.log(`[RELAY] Cache awal izin: ${permitCache.size}`);
+      return;
     }
+    snapshot.docChanges().forEach(handlePermitChange);
+  },
+  (error) => console.error('[RELAY] Listener permits error:', error),
+);
 
-    permitCache.set(docId, next);
-  });
-});
+console.log('[SIPRAK NOTIFIER RELAY] Siap. Memantau Firestore...');

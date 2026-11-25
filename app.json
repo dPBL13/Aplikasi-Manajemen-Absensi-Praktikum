@@ -66,8 +66,7 @@
           "barcodeScannerEnabled": true
         }
       ],
-      "@maplibre/maplibre-react-native",
-      "@react-native-firebase/messaging"
+      "@maplibre/maplibre-react-native"
     ],
     "experiments": {
       "typedRoutes": false,

@@ -1,6 +1,6 @@
 import type { PracticumSession, PushNotificationPayload } from '@/types/domain';
 
-export const PRESENSI_ROUTE = '/praktikan/session'; // Menggunakan /praktikan/session/[id] sesuai handoff sebelum HF-01 merge
+export const PRESENSI_ROUTE = '/praktikan/presensi'; // Menggunakan /praktikan/session/[id] sesuai handoff sebelum HF-01 merge
 
 /**
  * Mendeteksi apakah status sesi praktikum berubah menjadi 'berlangsung' (dibuka oleh Asprak).
@@ -9,10 +9,8 @@ export function detectSessionOpened(
   prev: PracticumSession | undefined | null,
   next: PracticumSession
 ): boolean {
-  if (!prev) {
-    // Jika data sebelumnya belum ada tapi data baru langsung 'berlangsung'
-    return next.status === 'berlangsung';
-  }
+  if (!prev) return false;
+  
   return prev.status !== 'berlangsung' && next.status === 'berlangsung';
 }
 
