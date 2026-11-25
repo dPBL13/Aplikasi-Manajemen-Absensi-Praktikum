@@ -1,42 +1,65 @@
-import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+
+import { PermissionPrimerDialog } from '@/components/notifications/permission-primer-dialog';
 import { useAuth } from '@/hooks/use-auth';
-import { notificationService } from '@/services/notification';
-import { devicePermissionService } from '@/services/device-permission';
+import { devicePermissionService, type PermissionState } from '@/services/device-permission';
 import { registerDeviceToken, startTokenRefreshSync } from '@/services/fcm-token-sync';
+import { notificationService } from '@/services/notification';
 import type { PushNotificationPayload } from '@/types/domain';
+
+export interface ActiveToast {
+  id: number;
+  payload: PushNotificationPayload;
+}
 
 interface NotificationContextValue {
   token: string | null;
+  permission: PermissionState;
   initialized: boolean;
-  activeToast: PushNotificationPayload | null;
+  activeToast: ActiveToast | null;
   dismissToast: () => void;
   refreshToken: () => Promise<void>;
 }
 
 const NotificationContext = createContext<NotificationContextValue | null>(null);
 
-export function NotificationProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
-  const [token, setToken] = useState<string | null>(null);
-  const [initialized, setInitialized] = useState(false);
-  const [activeToast, setActiveToast] = useState<PushNotificationPayload | null>(null);
+/** Batas antrean toast; yang terlama dibuang bila notifikasi datang beruntun. */
+const MAX_QUEUE = 5;
 
-  // Inisialisasi kanal dan handler notifikasi saat provider mount
+export function NotificationProvider({ children }: { children: React.ReactNode }) {
+  const { user, role } = useAuth();
+  const uid = user?.uid ?? null;
+  const isPraktikan = role === 'praktikan';
+
+  const [token, setToken] = useState<string | null>(null);
+  const [permission, setPermission] = useState<PermissionState>('undetermined');
+  const [initialized, setInitialized] = useState(false);
+  const [toastQueue, setToastQueue] = useState<ActiveToast[]>([]);
+  const [primerVisible, setPrimerVisible] = useState(false);
+  const [grantVersion, setGrantVersion] = useState(0);
+  const primerAskedRef = useRef(false);
+  const toastIdRef = useRef(0);
+
+  // Kanal + handler notifikasi, dan pendengar notifikasi foreground (antrean toast).
   useEffect(() => {
     let mounted = true;
 
-    async function init() {
-      await notificationService.initialize();
-      if (mounted) {
-        setInitialized(true);
-      }
-    }
+    void notificationService.initialize().then(() => {
+      if (mounted) setInitialized(true);
+    });
 
-    init();
-
-    // Listener foreground heads-up banner
     const unsubForeground = notificationService.onForegroundNotification((payload) => {
-      setActiveToast(payload);
+      toastIdRef.current += 1;
+      const item: ActiveToast = { id: toastIdRef.current, payload };
+      setToastQueue((queue) => [...queue, item].slice(-MAX_QUEUE));
     });
 
     return () => {
@@ -45,63 +68,81 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     };
   }, []);
 
-  // Registrasi token FCM saat user login dan permission granted
+  // Praktikan login: cek izin → (granted) daftarkan token, (belum) tampilkan dialog edukasi.
   useEffect(() => {
-    if (!user?.uid || !initialized) {
+    if (!uid || !initialized || !isPraktikan) {
+      if (!uid) primerAskedRef.current = false;
       return;
     }
 
-    let unsubRefresh: (() => void) | null = null;
-    let isCancelled = false;
+    const currentUid = uid;
+    let cancelled = false;
+    let stopRefresh: (() => void) | null = null;
 
-    async function syncToken() {
-      const perm = await devicePermissionService.getStatus('notification');
-      if (perm === 'granted') {
-        const res = await registerDeviceToken(user!.uid);
-        if (res.ok && res.token && !isCancelled) {
-          setToken(res.token);
-        }
-      }
-      if (!isCancelled) {
-        unsubRefresh = startTokenRefreshSync(user!.uid);
+    async function sync() {
+      const state = await devicePermissionService.getStatus('notification');
+      if (cancelled) return;
+      setPermission(state);
+
+      if (state === 'granted') {
+        const res = await registerDeviceToken(currentUid);
+        if (cancelled) return;
+        if (res.ok && res.token) setToken(res.token);
+        stopRefresh = startTokenRefreshSync(currentUid);
+      } else if ((state === 'undetermined' || state === 'denied') && !primerAskedRef.current) {
+        primerAskedRef.current = true;
+        setPrimerVisible(true);
       }
     }
 
-    syncToken();
+    void sync();
 
     return () => {
-      isCancelled = true;
-      if (unsubRefresh) unsubRefresh();
+      cancelled = true;
+      stopRefresh?.();
     };
-  }, [user, initialized]);
+  }, [uid, initialized, isPraktikan, grantVersion]);
+
+  const handleAllow = useCallback(async () => {
+    setPrimerVisible(false);
+    const next = await devicePermissionService.requestNotification();
+    setPermission(next);
+    if (next === 'granted') setGrantVersion((version) => version + 1);
+  }, []);
+
+  const handleLater = useCallback(() => setPrimerVisible(false), []);
 
   const dismissToast = useCallback(() => {
-    setActiveToast(null);
+    setToastQueue((queue) => queue.slice(1));
   }, []);
 
   const refreshToken = useCallback(async () => {
-    if (user?.uid) {
-      const res = await registerDeviceToken(user.uid);
-      if (res.ok && res.token) {
-        setToken(res.token);
-      }
-    }
-  }, [user]);
+    if (!uid) return;
+    const res = await registerDeviceToken(uid);
+    if (res.ok && res.token) setToken(res.token);
+  }, [uid]);
 
-  const value = useMemo(
+  const value = useMemo<NotificationContextValue>(
     () => ({
-      token: user ? token : null,
+      token: uid ? token : null,
+      permission,
       initialized,
-      activeToast,
+      activeToast: toastQueue[0] ?? null,
       dismissToast,
       refreshToken,
     }),
-    [token, initialized, activeToast, user, dismissToast, refreshToken]
+    [uid, token, permission, initialized, toastQueue, dismissToast, refreshToken],
   );
 
   return (
     <NotificationContext.Provider value={value}>
       {children}
+      <PermissionPrimerDialog
+        visible={primerVisible}
+        kind="notification"
+        onAllow={handleAllow}
+        onLater={handleLater}
+      />
     </NotificationContext.Provider>
   );
 }

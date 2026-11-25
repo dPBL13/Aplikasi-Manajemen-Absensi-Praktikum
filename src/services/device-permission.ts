@@ -96,7 +96,7 @@ async function readRaw(kind: PermissionKind, ask: boolean): Promise<RawPermissio
   switch (kind) {
     case 'location':
       if (!Location?.getForegroundPermissionsAsync) {
-        return { status: 'granted', granted: true, canAskAgain: true };
+        return { status: 'undetermined', granted: false, canAskAgain: true };
       }
       return ask
         ? Location.requestForegroundPermissionsAsync()
@@ -105,12 +105,12 @@ async function readRaw(kind: PermissionKind, ask: boolean): Promise<RawPermissio
       // Android 13+: kanal harus ada dulu, kalau tidak dialog izin tidak muncul.
       if (ask) await notificationService.initialize();
       if (!Notifications?.getPermissionsAsync) {
-        return { status: 'granted', granted: true, canAskAgain: true };
+        return { status: 'undetermined', granted: false, canAskAgain: true };
       }
       return ask ? Notifications.requestPermissionsAsync() : Notifications.getPermissionsAsync();
     case 'camera':
       if (!Camera?.getCameraPermissionsAsync && !Camera?.requestCameraPermissionsAsync) {
-        return { status: 'granted', granted: true, canAskAgain: true };
+        return { status: 'undetermined', granted: false, canAskAgain: true };
       }
       return ask ? Camera.requestCameraPermissionsAsync() : Camera.getCameraPermissionsAsync();
   }
@@ -140,7 +140,7 @@ export const devicePermissionService: DevicePermissionService = {
   requestCamera: () => request('camera'),
   async isLocationServiceEnabled() {
     try {
-      if (!Location?.hasServicesEnabledAsync) return true;
+      if (!Location?.hasServicesEnabledAsync) return false;
       return await Location.hasServicesEnabledAsync();
     } catch {
       return false;

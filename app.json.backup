@@ -1,0 +1,88 @@
+{
+  "expo": {
+    "name": "Aplikasi-Manajemen-Absensi-Praktikum",
+    "slug": "Aplikasi-Manajemen-Absensi-Praktikum",
+    "version": "1.0.0",
+    "orientation": "default",
+    "icon": "./assets/images/icon.png",
+    "scheme": "aplikasimanajemenabsensipraktikum",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "icon": "./assets/expo.icon"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#272757",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "googleServicesFile": "./google-services.json",
+      "predictiveBackGestureEnabled": false,
+      "package": "com.dpbl13.amapppk"
+    },
+    "web": {
+      "output": "single",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      [
+        "./plugins/withFirebaseBom.js",
+        {
+          "bom": "34.19.0"
+        }
+      ],
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#272757",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 76
+        }
+      ],
+      "@react-native-firebase/app",
+      "@react-native-firebase/auth",
+      "expo-web-browser",
+      [
+        "expo-notifications",
+        {
+          "color": "#235C3A",
+          "defaultChannel": "sesi-praktikum"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "isAndroidBackgroundLocationEnabled": false,
+          "isAndroidForegroundServiceEnabled": false
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Kamera dipakai untuk memindai QR Code presensi.",
+          "recordAudioAndroid": false,
+          "barcodeScannerEnabled": true
+        }
+      ],
+      "@maplibre/maplibre-react-native",
+      "@react-native-firebase/messaging"
+    ],
+    "experiments": {
+      "typedRoutes": false,
+      "reactCompiler": true
+    },
+    "extra": {
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "d408cfb1-ac25-462f-b54d-c9f17b3f9bb4"
+      }
+    },
+    "owner": "hafiszulfikars-team"
+  }
+}

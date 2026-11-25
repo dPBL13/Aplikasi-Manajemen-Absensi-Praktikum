@@ -96,6 +96,31 @@ export function parseNotificationContent(
   };
 }
 
+/**
+ * Mengambil isi notifikasi dari `request`. Pesan FCM langsung bisa menaruh `data`
+ * di `trigger.remoteMessage` alih-alih `content.data` [BELUM TERVERIFIKASI; uji di perangkat].
+ */
+export function extractNotificationContent(request: unknown): RawNotificationContent {
+  const req = (request ?? {}) as {
+    content?: RawNotificationContent;
+    trigger?: {
+      remoteMessage?: {
+        data?: Record<string, unknown>;
+        notification?: { title?: string | null; body?: string | null };
+      };
+    };
+  };
+  const content = req.content ?? {};
+  const remote = req.trigger?.remoteMessage;
+  const hasData = !!content.data && Object.keys(content.data).length > 0;
+
+  return {
+    title: content.title ?? remote?.notification?.title ?? null,
+    body: content.body ?? remote?.notification?.body ?? null,
+    data: hasData ? content.data : (remote?.data ?? null),
+  };
+}
+
 function toDataRecord(data: PushNotificationPayload['data']): Record<string, string> {
   const record: Record<string, string> = { type: data.type, screen: data.screen };
   if (data.sessionId) record.sessionId = data.sessionId;
@@ -168,7 +193,7 @@ function onForegroundNotification(
   if (!Notifications?.addNotificationReceivedListener) return () => {};
 
   const subscription = Notifications.addNotificationReceivedListener((notification: any) => {
-    const payload = parseNotificationContent(notification.request.content);
+    const payload = parseNotificationContent(extractNotificationContent(notification.request));
     if (payload) listener(payload);
   });
 

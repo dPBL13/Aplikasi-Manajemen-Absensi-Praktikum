@@ -1,8 +1,8 @@
-import { Platform } from 'react-native';
-import { collection, doc, setDoc, deleteDoc } from '@react-native-firebase/firestore';
 import { firestore } from '@/services/firebase/config';
 import { notificationService } from '@/services/notification';
 import type { FcmTokenDoc } from '@/types/domain';
+import { collection, deleteDoc, doc, setDoc } from '@react-native-firebase/firestore';
+import { Platform } from 'react-native';
 
 let currentRegisteredToken: string | null = null;
 let unsubscribeTokenRefresh: (() => void) | null = null;
@@ -27,7 +27,7 @@ export async function registerDeviceToken(uid: string): Promise<{ ok: boolean; t
     const tokenDoc: FcmTokenDoc = {
       token,
       platform: 'android',
-      deviceModel,
+      ...(deviceModel ? { deviceModel } : {}),
       lastActiveAt: new Date().toISOString(),
     };
 
@@ -90,7 +90,7 @@ export function startTokenRefreshSync(uid: string): () => void {
       const tokenDoc: FcmTokenDoc = {
         token: newToken,
         platform: 'android',
-        deviceModel,
+        ...(deviceModel ? { deviceModel } : {}),
         lastActiveAt: new Date().toISOString(),
       };
 
