@@ -1,7 +1,8 @@
-import { useFocusEffect } from 'expo-router';
 import * as Location from 'expo-location';
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { devicePermissionService } from '@/services/device-permission';
 import type { GeofenceCoordinate } from '@/types/domain';
 
 /**
@@ -55,15 +56,15 @@ const WATCH_DISTANCE_INTERVAL_M = 5;
 /** Satu-satunya bagian yang diganti ketika YG-02 tersedia. */
 const permissionGateway = {
   async ensureForeground(): Promise<'granted' | 'denied' | 'blocked'> {
-    const current = await Location.getForegroundPermissionsAsync();
-    if (current.granted) return 'granted';
-    if (!current.canAskAgain) return 'blocked';
+    const current = await devicePermissionService.getStatus('location');
+    if (current === 'granted') return 'granted';
+    if (current === 'blocked') return 'blocked';
 
-    const requested = await Location.requestForegroundPermissionsAsync();
-    if (requested.granted) return 'granted';
-    return requested.canAskAgain ? 'denied' : 'blocked';
+    const requested = await devicePermissionService.requestLocation();
+    if (requested === 'granted') return 'granted';
+    return requested === 'blocked' ? 'blocked' : 'denied';
   },
-  isLocationServicesEnabled: () => Location.hasServicesEnabledAsync(),
+  isLocationServicesEnabled: () => devicePermissionService.isLocationServiceEnabled(),
 };
 
 function toFix(position: Location.LocationObject): UserLocationFix {

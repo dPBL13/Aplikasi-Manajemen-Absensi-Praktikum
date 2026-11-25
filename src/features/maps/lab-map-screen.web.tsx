@@ -3,7 +3,7 @@ import { StyleSheet } from 'react-native';
 import { EmptyState } from '@/components/empty-state';
 import { ScreenScroll } from '@/components/screen-scroll';
 
-/** `react-native-maps` hanya mendukung Android/iOS; web menampilkan keterangan saja. */
+/** `MapLibre-React-Native` hanya mendukung Android(/iOS); web menampilkan keterangan saja. */
 export function LabMapScreen() {
   return (
     <ScreenScroll contentContainerStyle={styles.content}>

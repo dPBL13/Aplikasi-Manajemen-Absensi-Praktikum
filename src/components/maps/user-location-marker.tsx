@@ -1,6 +1,6 @@
+import { Marker } from '@maplibre/maplibre-react-native';
 import { useEffect, useState } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
-import { Marker } from 'react-native-maps';
 
 import { useTheme } from '@/hooks/use-theme';
 import type { UserLocationFix } from '@/hooks/use-user-location';
@@ -38,13 +38,9 @@ export function UserLocationMarker({ fix }: UserLocationMarkerProps) {
 
   return (
     <Marker
-      coordinate={fix.coordinate}
-      anchor={{ x: 0.5, y: 0.5 }}
-      flat
-      tracksViewChanges
-      zIndex={10}
-      accessibilityLabel="Posisi Anda"
-      tappable={false}>
+      lngLat={[fix.coordinate.longitude, fix.coordinate.latitude]}
+      anchor="center"
+      accessibilityLabel="Posisi Anda">
       <View style={styles.box}>
         <Animated.View
           style={[styles.pulse, { backgroundColor: theme.accent, opacity, transform: [{ scale }] }]}
