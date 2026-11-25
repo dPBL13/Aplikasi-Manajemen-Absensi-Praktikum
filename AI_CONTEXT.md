@@ -105,6 +105,9 @@ File: `src/types/domain.ts`. Read it — field comments are the spec. Summary:
 | `PracticumSession` | `id, classId, courseName, classGroup, room, dayLabel, dateLabel, startTime, endTime, asprakName, status, openedAt?, closedAt?, closingNote?, participants[]` | Denormalized class info for cheap rendering. |
 | `Permit` | `id, sessionId, classId, participantId, participantName, nim, courseName, reason, submittedAt, aiCategory, aiConfidence, aiModel?, status, decidedAt?, decidedBy?, decisionNote?` | AI fields are filled by the Backend module (FR-17/18). |
 | `AppData` | `{ classes, sessions, permits }` | Whole app state snapshot. |
+| `Laboratory` | `id, name, code, building, latitude, longitude, radius, capacity?, description?, updatedAt, updatedBy` | Sprint 3. Radius 15–200 m (default 50). Collection `laboratories`; **not** part of `AppData` — read via `useLaboratories()`. |
+| `GeofenceCoordinate` / `GeofenceValidationResult` | `{latitude, longitude}` / `{distanceMeters, isWithinRadius, accuracy, isMocked}` | Sprint 3 contract (SRS §10.2). |
+| `PracticumSession.laboratoryId?` | optional | Links a session to a lab (FR-31). Falls back to matching `room` text when absent. |
 
 Enums (values are Indonesian; **never invent new ones** without updating `constants/labels.ts`, badges, and this file):
 
@@ -261,9 +264,14 @@ Implemented in `src/services/mock/index.ts`; replicate them in any new adapter.
 | `/asprak/rekap` | Rekap kehadiran | Asprak |
 | `/asprak/izin` | Daftar pengajuan izin | Asprak |
 | `/asprak/izin/:id` | Detail izin + keputusan | Asprak |
+| `/asprak/lab` | Daftar laboratorium & radius (tab "Lab") — FR-29 | Asprak |
+| `/asprak/lab/baru` | Lab baru | Asprak |
+| `/asprak/lab/:id` | Edit koordinat/radius, hapus lab | Asprak |
+| `/maps` | Peta lab interaktif — FR-30/31 (`(shared)` group, web = placeholder) | shared |
 | `/praktikan` | Daftar sesi | Praktikan |
 | `/praktikan/riwayat` | Riwayat kehadiran | Praktikan |
 | `/praktikan/session/:id` | Detail sesi + presensi | Praktikan |
+| `/praktikan/maps-tab` | Tab "Peta Lab" (layar peta yang sama dengan `/maps`) | Praktikan |
 | `/praktikan/presensi/:sessionId` | Halaman presensi mandiri geofencing (FR-27) | Praktikan |
 
 Navigation notes:
@@ -397,3 +405,18 @@ Coverage details:
 - **Screens must not compute rules** (e.g. "can check in?"). They may compute presentation only.
 - **`@expo/ui` is Android/iOS only.** `@expo/ui/community/datetime-picker` renders nothing on web, so `DateTimeField` falls back to a text input there. Do not import `@expo/ui/swift-ui` or `@expo/ui/jetpack-compose` in shared code.
 - **Windows dev**: commands are run in PowerShell; the repo is `LF`-based (git may warn about CRLF). Do not commit lockfile-only churn.
+
+---
+
+## 15. Sprint 3 — Laboratorium, Peta & Geofencing (owner: JH)
+
+Files (all JH-owned): `utils/haversine.ts`, `services/geofence-calculator.ts`, `services/laboratory.ts` (+ `laboratory-contract.ts`, `mock/laboratory-mock.ts`, `data/seed-labs.ts`), `services/lab-activity.ts` (+ `lab-activity-selectors.ts`), `hooks/use-user-location.ts`, `components/maps/*`, `features/maps/lab-map-screen(.web).tsx`, `features/asprak/lab-form.tsx`, routes in §8.
+
+Rules:
+
+- Laboratories are **a separate service**, not part of `DataService`/`AppData`. Screens use `useLaboratories()` / `useLaboratory(id)` to read and `laboratoryService` to write. Never import `./mock/laboratory-mock` or `@/data/seed-labs` from a screen.
+- Geofence math lives only in `utils/haversine.ts`; consumers (HF) import `geofenceCalculator` / `calculateDistanceHaversine` from `@/services/geofence-calculator`. Do not re-implement distance elsewhere.
+- Maps code imports `react-native-maps`, which is **native only**. Anything that imports it must be reachable only from a file that has a `.web.tsx` sibling (see `features/maps/lab-map-screen.web.tsx`).
+- Live tracking is foreground-only and stops on blur/unmount (`useUserLocation`). Until `DevicePermissionService` (YG-02) lands, permissions go through the single `permissionGateway` object inside `hooks/use-user-location.ts` — swap that block, nothing else.
+- `LabActivitySheet` reads sessions only; it must never write to sessions or attendance.
+- Tests: `npm test` (jest-expo). Test files import globals from `@jest/globals` because TypeScript 6 no longer auto-loads `@types/*`.

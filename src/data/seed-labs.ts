@@ -1,8 +1,12 @@
 import type { Laboratory } from '@/types/domain';
 
 /**
- * Data seed master laboratorium Departemen Informatika Universitas Diponegoro.
- * Koordinat sentroid berbasis area Gedung E Departemen Informatika FSM Undip.
+ * Data contoh laboratorium Informatika Undip (JH-01). HANYA dipakai adapter
+ * mock/fallback di `src/services/` — layar dilarang mengimpor file ini.
+ *
+ * Koordinat berada di sekitar Departemen Informatika FSM Undip
+ * (lat ≈ -7.0498, lng ≈ 110.4391) dan MASIH PERLU DIVERIFIKASI di lapangan
+ * lewat tombol "Gunakan Lokasi Saya Saat Ini" pada layar Kelola Lab.
  */
 export const seedLaboratories: Laboratory[] = [
   {
@@ -16,46 +20,46 @@ export const seedLaboratories: Laboratory[] = [
     capacity: 40,
     description: 'Lab untuk praktikum pemrograman, rekayasa web, dan mobile',
     updatedAt: '2026-11-20T10:00:00.000Z',
-    updatedBy: 'asprak-001',
+    updatedBy: 'seed',
   },
   {
-    id: 'lab-jarkom',
+    id: 'lab-jst',
     name: 'Laboratorium Jaringan & Sistem Tertanam',
-    code: 'LAB-JARKOM',
+    code: 'LAB-JST',
     building: 'Gedung E Lantai 2',
-    latitude: -7.0499,
-    longitude: 110.4392,
-    radius: 50,
-    capacity: 35,
-    description: 'Lab untuk praktikum jaringan komputer, sistem operasi, dan IoT',
+    latitude: -7.049702,
+    longitude: 110.439305,
+    radius: 40,
+    capacity: 32,
+    description: 'Praktikum jaringan komputer, IoT, dan sistem tertanam',
     updatedAt: '2026-11-20T10:00:00.000Z',
-    updatedBy: 'asprak-001',
+    updatedBy: 'seed',
   },
   {
-    id: 'lab-komputasi',
-    name: 'Laboratorium Komputasi Terapan & Basis Data',
-    code: 'LAB-KOMPUTASI',
+    id: 'lab-kta',
+    name: 'Laboratorium Komputasi Terapan',
+    code: 'LAB-KTA',
     building: 'Gedung E Lantai 3',
-    latitude: -7.04975,
-    longitude: 110.43905,
+    latitude: -7.049954,
+    longitude: 110.439488,
     radius: 50,
-    capacity: 45,
-    description: 'Lab untuk sistem basis data, algoritma, dan pemrograman lanjut',
+    capacity: 36,
+    description: 'Praktikum komputasi numerik, basis data, dan analisis data',
     updatedAt: '2026-11-20T10:00:00.000Z',
-    updatedBy: 'asprak-001',
+    updatedBy: 'seed',
   },
   {
-    id: 'lab-ai',
-    name: 'Laboratorium Kecerdasan Buatan & Grafika',
-    code: 'LAB-AI',
+    id: 'lab-aim',
+    name: 'Laboratorium AI & Multimedia',
+    code: 'LAB-AIM',
     building: 'Gedung E Lantai 3',
-    latitude: -7.04988,
-    longitude: 110.43915,
-    radius: 50,
-    capacity: 40,
-    description: 'Lab untuk kecerdasan buatan, visi komputer, dan multimedia',
+    latitude: -7.049611,
+    longitude: 110.439021,
+    radius: 60,
+    capacity: 30,
+    description: 'Praktikum kecerdasan buatan, citra digital, dan multimedia',
     updatedAt: '2026-11-20T10:00:00.000Z',
-    updatedBy: 'asprak-001',
+    updatedBy: 'seed',
   },
 ];
 

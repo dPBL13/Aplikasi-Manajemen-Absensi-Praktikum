@@ -60,6 +60,7 @@ export default function AsprakTabsLayout() {
       <Tabs.Screen name="kelas" options={{ title: 'Kelas' }} />
       <Tabs.Screen name="rekap" options={{ title: 'Rekap' }} />
       <Tabs.Screen name="izin" options={{ title: 'Izin' }} />
+      <Tabs.Screen name="lab" options={{ title: 'Lab' }} />
     </Tabs>
   );
 }
