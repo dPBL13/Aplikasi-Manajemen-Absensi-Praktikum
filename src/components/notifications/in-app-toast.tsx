@@ -1,4 +1,6 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import { Colors, Fonts } from '@/constants/theme';
+import type { PushNotificationPayload } from '@/types/domain';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   StyleSheet,
@@ -7,8 +9,6 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors, Fonts } from '@/constants/theme';
-import type { PushNotificationPayload } from '@/types/domain';
 
 let Haptics: any = null;
 try {
@@ -29,7 +29,12 @@ export function InAppToast({ payload, onPress, onDismiss }: InAppToastProps) {
   const [translateY] = useState(() => new Animated.Value(-120));
   const [opacity] = useState(() => new Animated.Value(0));
 
+  const closedRef = useRef(false);
+
   const dismiss = useCallback(() => {
+    if (closedRef.current) return;
+    closedRef.current = true;
+    
     Animated.parallel([
       Animated.timing(translateY, {
         toValue: -120,
@@ -150,7 +155,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     minHeight: 56,
-    shadowColor: '#000',
+    shadowColor: Colors.dark.backgroundSelected,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 8,

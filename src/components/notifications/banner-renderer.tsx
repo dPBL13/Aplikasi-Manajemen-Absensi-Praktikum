@@ -1,12 +1,10 @@
-import React from 'react';
 import { useNotification } from '@/context/notification-context';
-import { InAppToast } from './in-app-toast';
-import { handleNotificationRoute } from '@/utils/notification-deep-link';
 import { useAuth } from '@/hooks/use-auth';
+import { handleNotificationRoute } from '@/utils/notification-deep-link';
 
-/**
- * BannerRenderer me-render banner Heads-up Toast saat ada payload notifikasi di state activeToast.
- */
+import { InAppToast } from './in-app-toast';
+
+/** Menampilkan toast terdepan dari antrean notifikasi foreground. */
 export function BannerRenderer() {
   const { activeToast, dismissToast } = useNotification();
   const { userProfile } = useAuth();
@@ -15,7 +13,8 @@ export function BannerRenderer() {
 
   return (
     <InAppToast
-      payload={activeToast}
+      key={activeToast.id}
+      payload={activeToast.payload}
       onDismiss={dismissToast}
       onPress={(payload) => {
         handleNotificationRoute(payload, userProfile?.role ?? null);

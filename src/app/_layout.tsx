@@ -52,7 +52,6 @@ function RootNavigation() {
 
   return (
     <>
-      <BannerRenderer />
       <Stack
         screenOptions={{
           headerStyle: { backgroundColor: Colors.dark.backgroundSelected },
@@ -65,6 +64,7 @@ function RootNavigation() {
         <Stack.Screen name="praktikan" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       </Stack>
+    <BannerRenderer />
     </>
   );
 }
