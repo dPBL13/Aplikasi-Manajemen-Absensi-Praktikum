@@ -1,6 +1,10 @@
-import { Circle } from 'react-native-maps';
-
-import { useTheme } from '@/hooks/use-theme';
+/**
+ * GeofenceCircle — visualisasi lingkaran radius dihapus sesuai spesifikasi:
+ * hanya marker/pin lab dan posisi pengguna yang ditampilkan di peta.
+ *
+ * File dipertahankan agar tidak ada missing-module error jika ada impor sisa,
+ * tetapi komponen ini merender `null` (tidak terlihat).
+ */
 import type { Laboratory } from '@/types/domain';
 
 type GeofenceCircleProps = {
@@ -9,28 +13,7 @@ type GeofenceCircleProps = {
   isUserInside?: boolean;
 };
 
-/** "#RRGGBB" → "rgba(r, g, b, a)" tanpa mendefinisikan warna baru di komponen. */
-function withAlpha(hex: string, alpha: number): string {
-  const value = hex.replace('#', '');
-  const r = parseInt(value.slice(0, 2), 16);
-  const g = parseInt(value.slice(2, 4), 16);
-  const b = parseInt(value.slice(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
-/** Overlay lingkaran transparan radius geofencing lab terpilih (JH-07, FR-29/FR-31). */
-export function GeofenceCircle({ lab, isUserInside }: GeofenceCircleProps) {
-  const theme = useTheme();
-  const base = isUserInside ? theme.success : theme.accent;
-
-  return (
-    <Circle
-      center={{ latitude: lab.latitude, longitude: lab.longitude }}
-      radius={lab.radius}
-      fillColor={withAlpha(base, 0.22)}
-      strokeColor={withAlpha(base, 0.9)}
-      strokeWidth={2}
-      zIndex={0}
-    />
-  );
+/** Overlay lingkaran radius geofencing — saat ini dinonaktifkan (hanya marker yang ditampilkan). */
+export function GeofenceCircle(_props: GeofenceCircleProps) {
+  return null;
 }

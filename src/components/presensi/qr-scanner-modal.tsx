@@ -1,3 +1,4 @@
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import React, { useEffect, useState } from 'react';
 import { Animated, Easing, Modal, Pressable, StyleSheet, View } from 'react-native';
 
@@ -30,6 +31,8 @@ export function QrScannerModal({
 }: QrScannerModalProps) {
   const theme = useTheme();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [scanned, setScanned] = useState(false);
+  const [permission, requestPermission] = useCameraPermissions();
 
   // Animasi scanning laser bar
   const [scanLineAnim] = useState(() => new Animated.Value(0));
@@ -63,6 +66,48 @@ export function QrScannerModal({
     outputRange: [0, 180],
   });
 
+  const handleBarcodeScanned = ({ data }: { data: string }) => {
+    if (scanned) return;
+    setScanned(true);
+
+    try {
+      let secret = data;
+      try {
+        const parsed = JSON.parse(data);
+        if (parsed.secret) {
+          secret = parsed.secret;
+        }
+        if (parsed.sessionId && parsed.sessionId !== session.id) {
+          setErrorMessage('QR Code ini bukan untuk sesi praktikum ini.');
+          setTimeout(() => setScanned(false), 2500);
+          return;
+        }
+      } catch {
+        // Raw token text
+      }
+
+      const expectedSecret = session.qrCodeSecret || `sec_${session.id}`;
+      if (secret !== expectedSecret && !secret.includes(session.id)) {
+        setErrorMessage('QR Code tidak valid untuk sesi ini.');
+        setTimeout(() => setScanned(false), 2500);
+        return;
+      }
+
+      if (!isWithinRadius) {
+        setErrorMessage(
+          `Presensi QR ditolak: Anda berada di luar radius laboratorium (${Math.round(distanceMeters)}m / Maks ${session.radius ?? 50}m).`,
+        );
+        setTimeout(() => setScanned(false), 2500);
+        return;
+      }
+
+      onScanSuccess(secret);
+    } catch {
+      setErrorMessage('Terjadi kesalahan saat membaca kode QR.');
+      setTimeout(() => setScanned(false), 2000);
+    }
+  };
+
   const handleSimulateScan = () => {
     if (!isWithinRadius) {
       setErrorMessage(
@@ -95,7 +140,29 @@ export function QrScannerModal({
           </ThemedText>
 
           {/* Area Kamera / Viewfinder */}
-          <View style={[styles.viewfinderContainer, { backgroundColor: theme.surfaceAlt }]}>
+          <View style={[styles.viewfinderContainer, { backgroundColor: '#000000' }]}>
+            {permission?.granted ? (
+              <CameraView
+                style={StyleSheet.absoluteFill}
+                facing="back"
+                barcodeScannerSettings={{
+                  barcodeTypes: ['qr'],
+                }}
+                onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
+              />
+            ) : (
+              <View style={styles.permissionBox}>
+                <ThemedText type="bodySm" style={{ color: '#FFFFFF', textAlign: 'center' }}>
+                  Izin kamera diperlukan untuk memindai QR Code.
+                </ThemedText>
+                <ActionButton
+                  label="Izinkan Akses Kamera"
+                  tone="primary"
+                  onPress={() => void requestPermission()}
+                />
+              </View>
+            )}
+
             <View style={[styles.viewfinderBox, { borderColor: theme.accent }]}>
               {/* Corner markers */}
               <View style={[styles.cornerTL, { borderColor: theme.accent }]} />
@@ -139,8 +206,8 @@ export function QrScannerModal({
 
           {/* Tombol Simulasi Scan di Emulator / Dev */}
           <ActionButton
-            label="Simulasikan Pindai QR Asisten"
-            tone="primary"
+            label="Simulasikan Pindai QR Asisten (Mode Emulator)"
+            tone="secondary"
             onPress={handleSimulateScan}
           />
 
@@ -231,5 +298,18 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     borderWidth: 1,
     alignItems: 'center',
+  },
+  permissionBox: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.three,
+    gap: Spacing.two,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    zIndex: 2,
   },
 });

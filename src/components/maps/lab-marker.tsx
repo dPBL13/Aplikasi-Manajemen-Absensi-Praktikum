@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
-import { Marker } from 'react-native-maps';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Marker } from '@maplibre/maplibre-react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
@@ -15,30 +14,21 @@ type LabMarkerProps = {
 
 /**
  * Marker laboratorium kustom (JH-04): pin bulat + label kode lab.
- * `tracksViewChanges` hanya aktif sebentar agar bitmap marker ter-render,
- * lalu dimatikan demi performa peta (terutama Android).
+ * Menggunakan @maplibre/maplibre-react-native — tidak butuh Google Maps API key.
+ * Perhatikan: MapLibre Marker menggunakan lngLat: [longitude, latitude].
  */
 export function LabMarker({ lab, selected = false, onPress }: LabMarkerProps) {
   const theme = useTheme();
-  // Marker perlu di-track sebentar setiap kali tampilannya berubah, lalu "settle".
-  const viewKey = `${selected}:${lab.code}`;
-  const [settledKey, setSettledKey] = useState<string | null>(null);
-  const tracks = settledKey !== viewKey;
-
-  useEffect(() => {
-    const id = setTimeout(() => setSettledKey(viewKey), 400);
-    return () => clearTimeout(id);
-  }, [viewKey]);
 
   return (
     <Marker
-      coordinate={{ latitude: lab.latitude, longitude: lab.longitude }}
-      onPress={() => onPress(lab)}
-      tracksViewChanges={tracks}
-      anchor={{ x: 0.5, y: 1 }}
-      accessibilityLabel={`Laboratorium ${lab.name}`}
-      zIndex={selected ? 2 : 1}>
-      <View style={styles.wrapper}>
+      id={`lab-${lab.id}`}
+      lngLat={[lab.longitude, lab.latitude]}
+      anchor="bottom">
+      <TouchableOpacity
+        onPress={() => onPress(lab)}
+        accessibilityLabel={`Laboratorium ${lab.name}`}
+        style={styles.wrapper}>
         <View
           style={[
             styles.label,
@@ -55,7 +45,7 @@ export function LabMarker({ lab, selected = false, onPress }: LabMarkerProps) {
           </ThemedText>
         </View>
         <View style={[styles.pin, { backgroundColor: theme.accent, borderColor: theme.backgroundElement }]} />
-      </View>
+      </TouchableOpacity>
     </Marker>
   );
 }

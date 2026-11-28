@@ -1,6 +1,7 @@
 import { Tabs, router } from 'expo-router';
 import { Pressable, useWindowDimensions } from 'react-native';
 
+import { TabBarIcon } from '@/components/tab-bar-icon';
 import { ThemedText } from '@/components/themed-text';
 import { Fonts, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -34,7 +35,6 @@ export default function AsprakTabsLayout() {
         },
         tabBarLabelStyle: { fontFamily: Fonts.bodySemiBold, fontSize: 11 },
         tabBarPosition: isWide ? 'left' : 'bottom',
-        tabBarVariant: isWide ? 'material' : 'uikit',
         headerRight: () => (
           <Pressable
             accessibilityRole="button"
@@ -56,11 +56,51 @@ export default function AsprakTabsLayout() {
           </Pressable>
         ),
       }}>
-      <Tabs.Screen name="index" options={{ title: 'Jadwal' }} />
-      <Tabs.Screen name="kelas" options={{ title: 'Kelas' }} />
-      <Tabs.Screen name="rekap" options={{ title: 'Rekap' }} />
-      <Tabs.Screen name="izin" options={{ title: 'Izin' }} />
-      <Tabs.Screen name="lab" options={{ title: 'Lab' }} />
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Jadwal',
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon name="calendar" color={color} focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="kelas"
+        options={{
+          title: 'Kelas',
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon name="class" color={color} focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="rekap"
+        options={{
+          title: 'Rekap',
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon name="recap" color={color} focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="izin"
+        options={{
+          title: 'Izin',
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon name="permit" color={color} focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="lab"
+        options={{
+          title: 'Lab',
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon name="lab" color={color} focused={focused} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }

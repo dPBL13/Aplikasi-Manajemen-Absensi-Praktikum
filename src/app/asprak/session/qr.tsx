@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import QRCode from 'react-native-qrcode-svg';
 
 import { ActionButton } from '@/components/action-button';
 import { Card } from '@/components/card';
@@ -37,6 +38,17 @@ export default function AsprakSessionQrScreen() {
   }
 
   const qrSecret = session.qrCodeSecret || `sec_${session.id}`;
+  const qrPayload = React.useMemo(
+    () =>
+      JSON.stringify({
+        sessionId: session.id,
+        secret: qrSecret,
+        courseName: session.courseName,
+        classGroup: session.classGroup,
+        room: session.room,
+      }),
+    [session.id, qrSecret, session.courseName, session.classGroup, session.room],
+  );
 
   return (
     <ScreenScroll>
@@ -61,21 +73,15 @@ export default function AsprakSessionQrScreen() {
           Ruang: {session.room} · Status: {session.status.toUpperCase()}
         </ThemedText>
 
-        {/* Visual QR Code Matrix */}
+        {/* Real QR Code Matrix */}
         <View style={styles.qrWrapper}>
           <View style={[styles.qrContainer, { backgroundColor: '#FFFFFF', borderColor: theme.border }]}>
-            <View style={styles.qrGrid}>
-              <View style={[styles.qrCorner, styles.qrTL]} />
-              <View style={[styles.qrCorner, styles.qrTR]} />
-              <View style={[styles.qrCorner, styles.qrBL]} />
-
-              <View style={styles.qrCenterPattern}>
-                <ThemedText style={styles.qrSymbol}>▦ ▨ ▣</ThemedText>
-                <ThemedText style={styles.qrSymbol}>▤ ▥ ▩</ThemedText>
-                <ThemedText style={styles.qrSymbol}>▣ ▨ ▦</ThemedText>
-              </View>
-            </View>
-
+            <QRCode
+              value={qrPayload}
+              size={220}
+              backgroundColor="#FFFFFF"
+              color="#000000"
+            />
             <ThemedText type="monoSm" style={styles.qrTokenText}>
               TOKEN: {qrSecret}
             </ThemedText>
@@ -84,7 +90,7 @@ export default function AsprakSessionQrScreen() {
 
         <View style={[styles.infoBox, { backgroundColor: theme.surfaceAlt }]}>
           <ThemedText type="bodySm" themeColor="onSurface">
-            Tampilkan layar ini kepada mahasiswa di laboratorium. Mahasiswa dapat memindai kode ini melalui tombol <ThemedText type="labelSm" themeColor="onSurface" style={{ fontWeight: '700' }}>[Scan QR Code]</ThemedText> pada halaman presensi mandiri mereka.
+            Tampilkan QR Code ini kepada mahasiswa di laboratorium. Mahasiswa dapat memindai kode ini melalui tombol <ThemedText type="labelSm" themeColor="onSurface" style={{ fontWeight: '700' }}>[Pindai QR Code]</ThemedText> pada radar presensi mandiri mereka.
           </ThemedText>
         </View>
 
@@ -127,54 +133,14 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  qrGrid: {
-    width: 220,
-    height: 220,
-    backgroundColor: '#000000',
-    borderRadius: Radius.md,
-    position: 'relative',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 12,
-  },
-  qrCorner: {
-    position: 'absolute',
-    width: 48,
-    height: 48,
-    borderWidth: 8,
-    borderColor: '#FFFFFF',
-    backgroundColor: '#000000',
-  },
-  qrTL: {
-    top: 12,
-    left: 12,
-  },
-  qrTR: {
-    top: 12,
-    right: 12,
-  },
-  qrBL: {
-    bottom: 12,
-    left: 12,
-  },
-  qrCenterPattern: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  qrSymbol: {
-    color: '#FFFFFF',
-    fontSize: 26,
-    letterSpacing: 6,
-    lineHeight: 32,
-  },
   qrTokenText: {
     color: '#000000',
     fontWeight: '700',
-    letterSpacing: 1,
-    marginTop: Spacing.one,
+    marginTop: Spacing.two,
   },
   infoBox: {
     padding: Spacing.three,
     borderRadius: Radius.md,
+    gap: Spacing.one,
   },
 });

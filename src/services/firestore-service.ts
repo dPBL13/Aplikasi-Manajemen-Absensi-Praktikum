@@ -29,7 +29,10 @@ import {
   validateCheckInLocation,
 } from './attendance-location';
 import { getFirebaseAuth, getFirebaseFirestore } from './firebase/config';
-import { classifyLeaveReasonLocal } from './local-classifier';
+import { classifyLeaveReason } from './gemini-service';
+import { notificationService } from './notification';
+import { detectSessionOpened } from './triggers/session-triggers';
+import { detectPermitDecision } from './triggers/schedule-permit-triggers';
 import type {
   ClassInput,
   DataService,
@@ -204,10 +207,19 @@ function initFirestoreSync() {
   const unsubSessions = onSnapshot(
     sessionsRef,
     (snap) => {
+      const prevSessions = cachedData.sessions;
       hasLoadedInitialData = true;
       const sessions = snap.docs.map((d) => ({ ...(d.data() as PracticumSession), id: d.id }));
       cachedData = { ...cachedData, sessions };
       notifyListeners();
+
+      // Deteksi notifikasi sesi dibuka dari asisten
+      sessions.forEach((nextSes) => {
+        const prevSes = prevSessions.find((p) => p.id === nextSes.id);
+        if (detectSessionOpened(prevSes, nextSes)) {
+          void notificationService.notifySessionOpened(nextSes.id, nextSes);
+        }
+      });
     },
     (err) => {
       console.warn('[firestore-service] Listener sessions error:', err);
@@ -218,10 +230,19 @@ function initFirestoreSync() {
   const unsubPermits = onSnapshot(
     permitsRef,
     (snap) => {
+      const prevPermits = cachedData.permits;
       hasLoadedInitialData = true;
       const permits = snap.docs.map((d) => ({ ...(d.data() as Permit), id: d.id }));
       cachedData = { ...cachedData, permits };
       notifyListeners();
+
+      // Deteksi notifikasi status keputusan izin
+      permits.forEach((nextPer) => {
+        const prevPer = prevPermits.find((p) => p.id === nextPer.id);
+        if (detectPermitDecision(prevPer, nextPer)) {
+          void notificationService.notifyPermitDecision(nextPer.id, nextPer);
+        }
+      });
     },
     (err) => {
       console.warn('[firestore-service] Listener permits error:', err);
@@ -599,6 +620,25 @@ export const firestoreDataService: DataService = {
     const authError = requireAuth();
     if (authError) return authError;
 
+    const prev = cachedData;
+    const openedTime = formatClock();
+    const targetSession = cachedData.sessions.find((s) => s.id === id);
+
+    // Pembaruan optimis lokal agar respon tombol instan (0ms)
+    if (targetSession) {
+      cachedData = {
+        ...cachedData,
+        sessions: cachedData.sessions.map((s) =>
+          s.id === id ? { ...s, status: 'berlangsung', openedAt: openedTime } : s,
+        ),
+      };
+      notifyListeners();
+      const updated = cachedData.sessions.find((s) => s.id === id);
+      if (updated) {
+        void notificationService.notifySessionOpened(id, updated);
+      }
+    }
+
     try {
       await runTransaction(getFirebaseFirestore(), async (transaction) => {
         const sessionRef = doc(getFirebaseFirestore(), 'sessions', id);
@@ -617,12 +657,14 @@ export const firestoreDataService: DataService = {
 
         transaction.update(sessionRef, {
           status: 'berlangsung',
-          openedAt: formatClock(),
+          openedAt: openedTime,
         });
       });
 
       return SUCCESS;
     } catch (err: any) {
+      cachedData = prev;
+      notifyListeners();
       return FAIL(err?.message || 'Gagal membuka sesi.');
     }
   },
@@ -630,6 +672,21 @@ export const firestoreDataService: DataService = {
   async closeSession(id: string, note?: string): Promise<MutationResult> {
     const authError = requireAuth();
     if (authError) return authError;
+
+    const prev = cachedData;
+    const closedTime = formatClock();
+    const cleanNote = note?.trim() || undefined;
+
+    // Pembaruan optimis lokal agar respon tombol instan (0ms)
+    cachedData = {
+      ...cachedData,
+      sessions: cachedData.sessions.map((s) =>
+        s.id === id
+          ? { ...s, status: 'selesai', closedAt: closedTime, closingNote: cleanNote }
+          : s,
+      ),
+    };
+    notifyListeners();
 
     try {
       await runTransaction(getFirebaseFirestore(), async (transaction) => {
@@ -649,13 +706,15 @@ export const firestoreDataService: DataService = {
 
         transaction.update(sessionRef, {
           status: 'selesai',
-          closedAt: formatClock(),
-          closingNote: note?.trim() || undefined,
+          closedAt: closedTime,
+          closingNote: cleanNote,
         });
       });
 
       return SUCCESS;
     } catch (err: any) {
+      cachedData = prev;
+      notifyListeners();
       return FAIL(err?.message || 'Gagal menutup sesi.');
     }
   },
@@ -664,6 +723,26 @@ export const firestoreDataService: DataService = {
   async checkIn(sessionId: string, participantId: string): Promise<MutationResult> {
     const authError = requireAuth();
     if (authError) return authError;
+
+    const prev = cachedData;
+    const checkInTime = formatClock();
+
+    // Pembaruan optimis lokal agar tombol segera bereaksi tanpa jeda jaringan
+    cachedData = {
+      ...cachedData,
+      sessions: cachedData.sessions.map((s) => {
+        if (s.id !== sessionId) return s;
+        return {
+          ...s,
+          participants: s.participants.map((p) =>
+            p.id === participantId || p.nim === participantId
+              ? { ...p, checkInAt: checkInTime }
+              : p,
+          ),
+        };
+      }),
+    };
+    notifyListeners();
 
     try {
       // Transaksi membaca ulang dokumen sesi, sehingga dua praktikan yang
@@ -706,6 +785,8 @@ export const firestoreDataService: DataService = {
 
       return SUCCESS;
     } catch (err: any) {
+      cachedData = prev;
+      notifyListeners();
       return FAIL(err?.message || 'Gagal mencatat presensi.');
     }
   },
@@ -784,20 +865,16 @@ export const firestoreDataService: DataService = {
       session.participants.find((p) => p.id === requestedId) ??
       (input.nim ? session.participants.find((p) => p.nim === input.nim) : undefined);
     const participantId = participant?.id ?? requestedId;
-    //new add, validation
     if (!participantId) {
       return FAIL('Identitas praktikan tidak ditemukan.');
-}
+    }
 
     const participantName = input.participantName || participant?.name || 'Praktikan';
     const nim = input.nim || participant?.nim || '24060124120000';
 
     try {
-      /* // Panggil Gemini AI untuk klasifikasi alasan (FR-17)
-      const aiResult = await classifyLeaveReason(reason); */
-
-      // Klasifikasi alasan izin secara offline dengan model lokal (FR-17)
-      const aiResult = classifyLeaveReasonLocal(reason);
+      // Panggil Gemini AI untuk klasifikasi alasan (dengan fallback model lokal)
+      const aiResult = await classifyLeaveReason(reason);
 
       const id = generateId('permit');
       const newPermit: Permit = {
@@ -816,7 +893,14 @@ export const firestoreDataService: DataService = {
         status: 'menunggu',
       };
 
-      // Simpan hasil klasifikasi AI ke Cloud getFirebaseFirestore() (FR-18)
+      // Pembaruan optimis lokal agar data izin langsung muncul di UI tanpa jeda
+      cachedData = {
+        ...cachedData,
+        permits: [newPermit, ...cachedData.permits.filter((p) => p.id !== id)],
+      };
+      notifyListeners();
+
+      // Simpan hasil klasifikasi AI ke Cloud Firestore (FR-18)
       await setDoc(doc(getFirebaseFirestore(), 'permits', id), newPermit);
 
       return { ok: true, permit: newPermit };
@@ -829,6 +913,32 @@ export const firestoreDataService: DataService = {
   async decidePermit(id: string, decision: PermitDecisionInput): Promise<MutationResult> {
     const authError = requireAuth();
     if (authError) return authError;
+
+    const prev = cachedData;
+    const decidedAt = new Date().toISOString();
+    const cleanNote = decision.note?.trim() || undefined;
+
+    // Pembaruan optimis lokal
+    cachedData = {
+      ...cachedData,
+      permits: cachedData.permits.map((p) =>
+        p.id === id
+          ? {
+              ...p,
+              status: decision.status,
+              decidedAt,
+              decidedBy: decision.decidedBy,
+              decisionNote: cleanNote,
+            }
+          : p,
+      ),
+    };
+    notifyListeners();
+
+    const decidedPermit = cachedData.permits.find((p) => p.id === id);
+    if (decidedPermit) {
+      void notificationService.notifyPermitDecision(id, decidedPermit);
+    }
 
     try {
       await runTransaction(getFirebaseFirestore(), async (transaction) => {
@@ -845,14 +955,16 @@ export const firestoreDataService: DataService = {
 
         transaction.update(permitRef, {
           status: decision.status,
-          decidedAt: new Date().toISOString(),
+          decidedAt,
           decidedBy: decision.decidedBy,
-          decisionNote: decision.note?.trim() || undefined,
+          decisionNote: cleanNote,
         });
       });
 
       return SUCCESS;
     } catch (err: any) {
+      cachedData = prev;
+      notifyListeners();
       return FAIL(err?.message || 'Gagal menyimpan keputusan izin.');
     }
   },
