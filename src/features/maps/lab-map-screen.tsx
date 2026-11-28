@@ -1,30 +1,32 @@
+import {
+  Camera,
+  Map,
+  UserLocation,
+  type CameraRef,
+} from '@maplibre/maplibre-react-native';
 import { Stack, router } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { Linking, Platform, StyleSheet, View } from 'react-native';
-import MapView, { PROVIDER_GOOGLE, type Region } from 'react-native-maps';
+import { Linking, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ActionButton } from '@/components/action-button';
-import { GeofenceCircle } from '@/components/maps/geofence-circle';
 import { LabActivitySheet } from '@/components/maps/lab-activity-sheet';
 import { LabMarker } from '@/components/maps/lab-marker';
-import { UserLocationMarker } from '@/components/maps/user-location-marker';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { useUserLocation, type UserLocationStatus } from '@/hooks/use-user-location';
 import { useLaboratories } from '@/services/laboratory';
-import { calculateDistanceHaversine, isCoordinateInRadius } from '@/services/geofence-calculator';
+import { calculateDistanceHaversine } from '@/services/geofence-calculator';
 import type { Laboratory, PracticumSession } from '@/types/domain';
 
+/** URL tile OpenStreetMap — tidak butuh API key (FR-30.1). */
+const OSM_STYLE_URL = 'https://demotiles.maplibre.org/style.json';
+
 /** Titik awal: Departemen Informatika FSM Undip (SRS FR-30.1). */
-const INFORMATIKA_UNDIP_REGION: Region = {
-  latitude: -7.0498,
-  longitude: 110.4391,
-  latitudeDelta: 0.004,
-  longitudeDelta: 0.004,
-};
+const INITIAL_CENTER: [number, number] = [110.4391, -7.0498]; // [lng, lat]
+const INITIAL_ZOOM = 15;
 
 const STATUS_MESSAGE: Partial<Record<UserLocationStatus, string>> = {
   denied: 'Izin lokasi dibutuhkan untuk menampilkan posisi Anda di peta.',
@@ -36,6 +38,7 @@ const STATUS_MESSAGE: Partial<Record<UserLocationStatus, string>> = {
 
 /**
  * Peta laboratorium interaktif (JH-04/05/06/07, FR-30/FR-31).
+ * Menggunakan @maplibre/maplibre-react-native — tidak butuh Google Maps API key.
  * Dipakai oleh `/maps` (shared) dan tab "Peta Lab" praktikan.
  */
 export function LabMapScreen() {
@@ -45,7 +48,7 @@ export function LabMapScreen() {
   const labs = useLaboratories();
   const { status, location, retry } = useUserLocation();
 
-  const mapRef = useRef<MapView>(null);
+  const cameraRef = useRef<CameraRef>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = useMemo(() => labs.find((lab) => lab.id === selectedId) ?? null, [labs, selectedId]);
 
@@ -53,31 +56,35 @@ export function LabMapScreen() {
     () => (selected && location ? calculateDistanceHaversine(location.coordinate, selected) : null),
     [selected, location],
   );
-  const userInsideSelected = useMemo(
-    () =>
-      selected && location
-        ? isCoordinateInRadius(location.coordinate, selected, selected.radius)
-        : undefined,
-    [selected, location],
-  );
 
   const focusLabs = useCallback(() => {
     if (labs.length === 0) {
-      mapRef.current?.animateToRegion(INFORMATIKA_UNDIP_REGION, 400);
+      cameraRef.current?.easeTo({ center: INITIAL_CENTER, zoom: INITIAL_ZOOM, duration: 400 });
       return;
     }
-    mapRef.current?.fitToCoordinates(
-      labs.map((lab) => ({ latitude: lab.latitude, longitude: lab.longitude })),
-      { edgePadding: { top: 120, right: 60, bottom: 160, left: 60 }, animated: true },
+    if (labs.length === 1) {
+      cameraRef.current?.easeTo({
+        center: [labs[0].longitude, labs[0].latitude],
+        zoom: 16,
+        duration: 400,
+      });
+      return;
+    }
+    const lngs = labs.map((l) => l.longitude);
+    const lats = labs.map((l) => l.latitude);
+    cameraRef.current?.fitBounds(
+      [Math.min(...lngs), Math.min(...lats), Math.max(...lngs), Math.max(...lats)],
+      { padding: { top: 120, right: 60, bottom: 160, left: 60 }, duration: 400 },
     );
   }, [labs]);
 
   const recenter = useCallback(() => {
     if (!location) return;
-    mapRef.current?.animateToRegion(
-      { ...location.coordinate, latitudeDelta: 0.002, longitudeDelta: 0.002 },
-      400,
-    );
+    cameraRef.current?.easeTo({
+      center: [location.coordinate.longitude, location.coordinate.latitude],
+      zoom: 17,
+      duration: 400,
+    });
   }, [location]);
 
   const openSession = useCallback(
@@ -94,10 +101,11 @@ export function LabMapScreen() {
 
   const onSelectLab = useCallback((lab: Laboratory) => {
     setSelectedId(lab.id);
-    mapRef.current?.animateToRegion(
-      { latitude: lab.latitude, longitude: lab.longitude, latitudeDelta: 0.0025, longitudeDelta: 0.0025 },
-      350,
-    );
+    cameraRef.current?.easeTo({
+      center: [lab.longitude, lab.latitude],
+      zoom: 17,
+      duration: 350,
+    });
   }, []);
 
   const banner = STATUS_MESSAGE[status];
@@ -106,20 +114,23 @@ export function LabMapScreen() {
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <Stack.Screen options={{ title: 'Peta Laboratorium' }} />
 
-      <MapView
-        ref={mapRef}
+      <Map
         style={StyleSheet.absoluteFill}
-        provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
-        initialRegion={INFORMATIKA_UNDIP_REGION}
-        showsCompass
-        toolbarEnabled={false}
+        mapStyle={OSM_STYLE_URL}
         onPress={() => setSelectedId(null)}>
+        <Camera
+          ref={cameraRef}
+          initialViewState={{ center: INITIAL_CENTER, zoom: INITIAL_ZOOM }}
+        />
+
+        {/* Marker lokasi pengguna (bawaan MapLibre) */}
+        <UserLocation animated />
+
+        {/* Marker setiap laboratorium */}
         {labs.map((lab) => (
           <LabMarker key={lab.id} lab={lab} selected={lab.id === selectedId} onPress={onSelectLab} />
         ))}
-        {selected ? <GeofenceCircle lab={selected} isUserInside={userInsideSelected} /> : null}
-        {location ? <UserLocationMarker fix={location} /> : null}
-      </MapView>
+      </Map>
 
       {banner ? (
         <View

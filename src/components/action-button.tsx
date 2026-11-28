@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import { Pressable, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 
 import { ThemedText } from './themed-text';
@@ -24,6 +25,16 @@ export function ActionButton({
 }: ActionButtonProps) {
   const theme = useTheme();
 
+  const handlePress = () => {
+    if (disabled) return;
+    try {
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {
+      // Haptics not available or web
+    }
+    onPress();
+  };
+
   const palette =
     tone === 'secondary'
       ? {
@@ -49,7 +60,9 @@ export function ActionButton({
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ disabled }}
       disabled={disabled}
-      onPress={onPress}
+      onPress={handlePress}
+      unstable_pressDelay={0}
+      hitSlop={6}
       style={({ pressed }) => [
         styles.button,
         disabled

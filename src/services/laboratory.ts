@@ -165,14 +165,32 @@ export const firestoreLaboratoryService: LaboratoryService = {
     if (isCodeTaken(input.code)) return FAIL('Kode laboratorium sudah dipakai.');
 
     const id = generateId();
+    const normalized = normalizeLaboratoryInput(input);
+    const newLab: Laboratory = {
+      id,
+      name: normalized.name,
+      code: normalized.code,
+      building: normalized.building,
+      latitude: normalized.latitude,
+      longitude: normalized.longitude,
+      radius: normalized.radius,
+      capacity: normalized.capacity ?? undefined,
+      description: normalized.description ?? undefined,
+      updatedAt: new Date().toISOString(),
+      updatedBy: firebaseAuth.currentUser?.uid ?? 'unknown',
+    };
+    const prev = cache;
+    emit([...cache, newLab]);
+
     try {
       await setDoc(doc(firestore, COLLECTION, id), {
-        ...normalizeLaboratoryInput(input),
-        updatedAt: new Date().toISOString(),
-        updatedBy: firebaseAuth.currentUser?.uid ?? 'unknown',
+        ...normalized,
+        updatedAt: newLab.updatedAt,
+        updatedBy: newLab.updatedBy,
       });
       return { ok: true, id };
     } catch (err) {
+      emit(prev);
       return FAIL(err instanceof Error ? err.message : 'Gagal menyimpan laboratorium.');
     }
   },
@@ -186,14 +204,37 @@ export const firestoreLaboratoryService: LaboratoryService = {
     if (error) return FAIL(error);
     if (isCodeTaken(input.code, id)) return FAIL('Kode laboratorium sudah dipakai.');
 
+    const prev = cache;
+    const normalized = normalizeLaboratoryInput(input);
+    const updatedAt = new Date().toISOString();
+    emit(
+      cache.map((l) =>
+        l.id === id
+          ? {
+              ...l,
+              name: normalized.name,
+              code: normalized.code,
+              building: normalized.building,
+              latitude: normalized.latitude,
+              longitude: normalized.longitude,
+              radius: normalized.radius,
+              capacity: normalized.capacity ?? undefined,
+              description: normalized.description ?? undefined,
+              updatedAt,
+            }
+          : l,
+      ),
+    );
+
     try {
       await updateDoc(doc(firestore, COLLECTION, id), {
-        ...normalizeLaboratoryInput(input),
-        updatedAt: new Date().toISOString(),
+        ...normalized,
+        updatedAt,
         updatedBy: firebaseAuth.currentUser?.uid ?? 'unknown',
       });
       return { ok: true };
     } catch (err) {
+      emit(prev);
       return FAIL(err instanceof Error ? err.message : 'Gagal memperbarui laboratorium.');
     }
   },
@@ -210,10 +251,14 @@ export const firestoreLaboratoryService: LaboratoryService = {
       .sessions.some((session) => session.laboratoryId === id && session.status !== 'selesai');
     if (inUse) return FAIL('Laboratorium masih dipakai sesi yang belum selesai.');
 
+    const prev = cache;
+    emit(cache.filter((lab) => lab.id !== id));
+
     try {
       await deleteDoc(doc(firestore, COLLECTION, id));
       return { ok: true };
     } catch (err) {
+      emit(prev);
       return FAIL(err instanceof Error ? err.message : 'Gagal menghapus laboratorium.');
     }
   },

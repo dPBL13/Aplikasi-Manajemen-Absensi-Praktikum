@@ -33,6 +33,12 @@ service cloud.firestore {
       }
     }
 
+    // Koleksi Laboratorium (Sprint 3, FR-29 / JH-01)
+    match /laboratories/{labId} {
+      allow read: if true; // Praktikan dan Asprak dapat melihat lokasi laboratorium
+      allow write: if isAuthenticated();
+    }
+
     // Koleksi Kelas Praktikum (FR-05)
     match /classes/{classId} {
       allow read: if true; // Praktikan dan Asprak dapat melihat kelas

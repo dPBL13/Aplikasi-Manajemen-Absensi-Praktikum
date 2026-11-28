@@ -59,8 +59,9 @@ src/
       izin/[id].tsx        Detail izin + terima/tolak FR-19/FR-20
     praktikan/
       _layout.tsx          Stack for the Praktikan module
-      (tabs)/_layout.tsx   Tabs: Sesi · Riwayat
+      (tabs)/_layout.tsx   Tabs: Sesi · Izin · Riwayat · Peta Lab
       (tabs)/index.tsx     Daftar sesi     FR-07/FR-09
+      (tabs)/izin.tsx      Pengajuan & riwayat izin FR-16/FR-18
       (tabs)/riwayat.tsx   Riwayat hadir   FR-14
       session/[id].tsx     Detail + presensi FR-10/FR-11
   components/              Reusable UI primitives (themed, no business logic)

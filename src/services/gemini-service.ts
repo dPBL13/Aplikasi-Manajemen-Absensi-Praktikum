@@ -1,6 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 
 import type { PermitCategory } from '@/types/domain';
+import { classifyLeaveReasonLocal } from './local-classifier';
 
 const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY || '';
 
@@ -14,10 +15,20 @@ export interface AIClassificationResult {
 }
 
 /**
- * Fallback berbasis kata kunci (heuristik) jika koneksi internet terputus
- * atau API Gemini mengalami kegagalan/kuota habis.
+ * Fallback jika koneksi internet terputus atau API Gemini mengalami kegagalan/kuota habis.
+ * Menggunakan model NLP offline lokal (model-izin.json) yang telah dilatih.
  */
 function fallbackClassification(reason: string): AIClassificationResult {
+  const localResult = classifyLeaveReasonLocal(reason);
+  if (localResult.category !== 'belum-diklasifikasi') {
+    return {
+      category: localResult.category,
+      confidence: localResult.confidence ?? 0.85,
+      model: localResult.model,
+      reasoning: localResult.reasoning ?? 'Hasil klasifikasi model NLP lokal.',
+    };
+  }
+
   const lower = reason.toLowerCase();
 
   const sakitKeywords = [

@@ -2,7 +2,9 @@
 
 import { Platform } from 'react-native';
 
-import type { PushNotificationPayload, PushNotificationType } from '@/types/domain';
+import type { Permit, PracticumSession, PushNotificationPayload, PushNotificationType } from '@/types/domain';
+import { buildSessionOpenedPayload } from './triggers/session-triggers';
+import { buildPermitDecisionPayload, buildScheduleChangedPayload } from './triggers/schedule-permit-triggers';
 
 let Notifications: any = null;
 let AndroidImportance: any = { MAX: 5, HIGH: 4, DEFAULT: 3 };
@@ -46,10 +48,12 @@ export interface NotificationService {
   onForegroundNotification(listener: (payload: PushNotificationPayload) => void): () => void;
   /** Menampilkan notifikasi lokal (simulasi/uji). */
   showLocal(payload: PushNotificationPayload): Promise<NotificationResult>;
-  /** Kontrak untuk modul lain. Pengiriman asli dilakukan relay server, jadi di aplikasi no-op. */
-  notifySessionOpened(sessionId: string): Promise<NotificationResult>;
-  notifyScheduleChanged(sessionId: string): Promise<NotificationResult>;
-  notifyPermitDecision(permitId: string): Promise<NotificationResult>;
+  /** Notifikasi sesi dibuka kepada praktikan. */
+  notifySessionOpened(sessionId: string, session?: PracticumSession): Promise<NotificationResult>;
+  /** Notifikasi perubahan jadwal sesi kepada praktikan. */
+  notifyScheduleChanged(sessionId: string, session?: PracticumSession): Promise<NotificationResult>;
+  /** Notifikasi keputusan pengajuan izin kepada praktikan. */
+  notifyPermitDecision(permitId: string, permit?: Permit): Promise<NotificationResult>;
 }
 
 function parseParams(raw: unknown): Record<string, string> | undefined {
@@ -112,12 +116,12 @@ async function initialize(): Promise<NotificationResult> {
   }
 
   try {
-    // Saat aplikasi terbuka, banner sistem ditahan; banner dalam aplikasi (YG-06) yang tampil.
+    // Handler notifikasi saat aplikasi dibuka (foreground)
     Notifications.setNotificationHandler({
       handleNotification: async () => ({
-        shouldShowBanner: false,
-        shouldShowList: false,
-        shouldPlaySound: false,
+        shouldShowBanner: true,
+        shouldShowList: true,
+        shouldPlaySound: true,
         shouldSetBadge: false,
       }),
     });
@@ -162,20 +166,37 @@ function onTokenRefresh(listener: (token: string) => void): () => void {
   return () => subscription.remove();
 }
 
+const foregroundListeners = new Set<(payload: PushNotificationPayload) => void>();
+
 function onForegroundNotification(
   listener: (payload: PushNotificationPayload) => void,
 ): () => void {
-  if (!Notifications?.addNotificationReceivedListener) return () => {};
+  foregroundListeners.add(listener);
 
-  const subscription = Notifications.addNotificationReceivedListener((notification: any) => {
-    const payload = parseNotificationContent(notification.request.content);
-    if (payload) listener(payload);
-  });
+  let subscription: any = null;
+  if (Notifications?.addNotificationReceivedListener) {
+    subscription = Notifications.addNotificationReceivedListener((notification: any) => {
+      const payload = parseNotificationContent(notification.request.content);
+      if (payload) listener(payload);
+    });
+  }
 
-  return () => subscription.remove();
+  return () => {
+    foregroundListeners.delete(listener);
+    if (subscription) subscription.remove();
+  };
 }
 
 async function showLocal(payload: PushNotificationPayload): Promise<NotificationResult> {
+  // Langsung picu banner dalam aplikasi
+  foregroundListeners.forEach((l) => {
+    try {
+      l(payload);
+    } catch (e) {
+      console.warn('[notification] listener error:', e);
+    }
+  });
+
   if (!Notifications?.scheduleNotificationAsync) return { ok: true };
   const ready = await initialize();
   if (!ready.ok) return ready;
@@ -187,7 +208,7 @@ async function showLocal(payload: PushNotificationPayload): Promise<Notification
         body: payload.body,
         data: toDataRecord(payload.data),
       },
-      trigger: { channelId: NOTIFICATION_CHANNEL_ID },
+      trigger: Platform.OS === 'android' ? { channelId: NOTIFICATION_CHANNEL_ID } : null,
     });
     return { ok: true };
   } catch (error) {
@@ -196,7 +217,32 @@ async function showLocal(payload: PushNotificationPayload): Promise<Notification
   }
 }
 
-const noop = async (): Promise<NotificationResult> => ({ ok: true });
+async function notifySessionOpened(
+  sessionId: string,
+  session?: PracticumSession,
+): Promise<NotificationResult> {
+  if (!session) return { ok: true };
+  const payload = buildSessionOpenedPayload(session);
+  return showLocal(payload);
+}
+
+async function notifyScheduleChanged(
+  sessionId: string,
+  session?: PracticumSession,
+): Promise<NotificationResult> {
+  if (!session) return { ok: true };
+  const payload = buildScheduleChangedPayload(session);
+  return showLocal(payload);
+}
+
+async function notifyPermitDecision(
+  permitId: string,
+  permit?: Permit,
+): Promise<NotificationResult> {
+  if (!permit) return { ok: true };
+  const payload = buildPermitDecisionPayload(permit);
+  return showLocal(payload);
+}
 
 export const notificationService: NotificationService = {
   initialize,
@@ -204,7 +250,7 @@ export const notificationService: NotificationService = {
   onTokenRefresh,
   onForegroundNotification,
   showLocal,
-  notifySessionOpened: noop,
-  notifyScheduleChanged: noop,
-  notifyPermitDecision: noop,
+  notifySessionOpened,
+  notifyScheduleChanged,
+  notifyPermitDecision,
 };
